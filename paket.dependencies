@@ -19,8 +19,9 @@ nuget altcover ~> 6
 nuget FSharp.Data copy_local: true
 nuget FSharpComposableQuery copy_local: true
 nuget FSharp.Data.TypeProviders copy_local: true
-
 nuget ExcelProvider
+nuget Markdig
+
 // [ FAKE GROUP ]
 group Build
     storage: none

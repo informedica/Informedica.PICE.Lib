@@ -40,6 +40,7 @@ NUGET
     FSharp.Data.TypeProviders (5.0.0.6) - copy_local: true
       FSharp.Core (>= 3.1.2.5)
     FSharpComposableQuery (1.0.4-beta) - copy_local: true
+    Markdig (0.21.1)
     Microsoft.Build (16.5) - restriction: || (&& (== net45) (>= netcoreapp1.0)) (== netcoreapp3.1)
       Microsoft.Build.Framework (>= 16.5) - restriction: || (&& (== net45) (>= net472)) (&& (== net45) (>= netcoreapp2.1)) (== netcoreapp3.1)
       Microsoft.Win32.Registry (>= 4.3) - restriction: || (&& (== net45) (>= netcoreapp2.1)) (== netcoreapp3.1)
