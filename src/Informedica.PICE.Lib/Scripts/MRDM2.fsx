@@ -3974,17 +3974,21 @@ module Statistics =
         [<Literal>]
         let line = "---"
         [<Literal>]
-        let headers5 = "|---|---|---|---|---|"
+        let headers5 = "|---|:---:|:---:|:---:|:---:|"
         [<Literal>]
         let columns5 = "|{0}|{1}|{2}|{3}|{4}|"
         [<Literal>]
-        let headers6 = "|---|---|---|---|---|---|"
+        let headers6 = "|---|:---:|:---:|:---:|:---:|:---:|"
         [<Literal>]
         let columns6 = "|{0}|{1}|{2}|{3}|{4}|{5}|"
         [<Literal>]
         let columns6link = "|[{0}]()|{1}|{2}|{3}|{4}|{5}|"
         [<Literal>]
         let columns6tick = "|{0}|`{1}`|`{2}`|`{3}`|`{4}`|`{5}`|"
+        [<Literal>]
+        let headers8 = "|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
+        [<Literal>]
+        let columns8 = "|{0}|{1}|{2}|{3}|{4}|{5}|{6:F0}|{7:F0}|"
         [<Literal>]
         let patTot = "* Totaal aantal patienten: {0}"
         [<Literal>]
@@ -4033,13 +4037,15 @@ module Statistics =
                 |> fun sb ->
                     let caps =
                         [
-                            "==  Maand  =="
+                            "Maand"
                             "Patienten"
                             "Opnames"
                             "Ontslagen"
                             "Overleden"
                             "Ligdagen"
-                        ] |> List.map box
+                        ]
+                        |> List.map (fun s -> "== " + s + " ==")
+                        |> List.map box
 
                     let sb =
                         sb
@@ -4078,13 +4084,17 @@ module Statistics =
 
         let caps =
             [
-                "==   Jaar   =="
+                "Jaar"
                 "Patienten"
                 "Opnames"
                 "Ontslagen"
-                "Overleden"
                 "Ligdagen"
-            ] |> List.map box
+                "Overleden"
+                "PIM2 Mortaliteit"
+                "PIM3 Mortaliteit"
+            ]
+            |> List.map (fun s -> "== " + s + " ==")
+            |> List.map box
 
         "# PICE Rapport"
         |> StringBuilder.builder
@@ -4116,8 +4126,8 @@ module Statistics =
             let sb =
                 sb
                 |> StringBuilder.newLine
-                |> StringBuilder.appendLineFormat Literals.columns6 caps
-                |> StringBuilder.appendLine Literals.headers6
+                |> StringBuilder.appendLineFormat Literals.columns8 caps
+                |> StringBuilder.appendLine Literals.headers8
 
             stats.YearTotals
             |> List.fold (fun acc stat ->
@@ -4127,12 +4137,14 @@ module Statistics =
                         stat.Totals.Patients   |> box
                         stat.Totals.Admissions |> box
                         stat.Totals.Discharged |> box
-                        stat.Totals.Deaths     |> box
                         stat.Totals.PICUDays   |> box
+                        stat.Totals.Deaths     |> box
+                        stat.Totals.PIM2Mortality |> box
+                        stat.Totals.PIM3Mortality |> box
                     ]
         
                 acc
-                |> StringBuilder.appendLineFormat Literals.columns6 vals
+                |> StringBuilder.appendLineFormat Literals.columns8 vals
             ) sb
         |> StringBuilder.newLine
         |> StringBuilder.appendLine Literals.line
@@ -4200,8 +4212,8 @@ pats
 * Ontslag wegens uitstel ingreep: 1
 #### Rapportage per maand
 
-|==== Maand =====|Patienten  |Opnames  |Ontslagen  |Overleden  |Ligdagen  |
-|-----|-----|-----|-----|-----|-----|
+|Maand|Patienten  |Opnames  |Ontslagen  |Overleden  |Ligdagen  |
+|-----|:---:|-----|-----|-----|-----|
 |januari|111|125|0|1|294|
 |februari|106|111|0|5|357|
 |maart|100|96|0|5|385|
