@@ -268,6 +268,63 @@ module Result =
 
 module Types =
 
+
+    type PIM =
+        {
+            Urgency: AdmissionUrgency
+            Recovery: bool
+            RiskDiagnosis: RiskDiagnosis list
+            CardiacByPass: bool
+            CardiacNonByPass: bool
+            NonCardiacProcedure: bool
+            Ventilated: bool
+            AdmissionPupils: PupilResponse
+            PaO2: float option
+            FiO2: float option
+            BaseExcess: float option
+            SystolicBloodPressure: float option
+            PIM2Score : float option
+            PIM2Mortality : float option
+            PIM3Score : float option
+            PIM3Mortality : float option
+        }
+
+    and AdmissionUrgency =
+        | Elective
+        | NotElective
+        | UnknownUrgency
+
+    and AdmissionType =
+        | Medical
+        | Surgery
+        | DOA
+        | UnknownAdmissionType
+
+    and PupilResponse =
+        | FixedDilated
+        | NormalPupils
+        | UnknownPupils
+
+    and RiskDiagnosis =
+        | Asthma
+        | BoneMarrowTransplant
+        | Bronchiolitis
+        | CardiacArrest
+        | CardiomyopathyOrMyocarditis
+        | CerebralHemorrhage
+        | Croup
+        | DiabeticKetoacidosis
+        | HIVPositive
+        | HypoplasticLeftHeartSyndrome
+        | LeukemiaorLymphoma
+        | LiverFailure
+        | NecrotizingEnterocolitis
+        | NeurodegenerativeDisorder
+        | ObstructiveSleepApnea
+        | SeizureDisorder
+        | SevereCombinedImmuneDeficiency
+
+
     type Patient =
         {
             HospitalNumber : string
@@ -300,57 +357,11 @@ module Types =
             AdmissionLength : int option
             TempMin12 : float option
             TempMax12 : float option
-            RiskDiagnosis : RiskDiagnosis
-            PIM2 : PIM2
+            RiskDiagnosis : RiskDiagnosis list
+            PIM : PIM
         }
-    and AdmissionUrgency = | Elective | NotElective | UnknownUrgency
-    and AdmissionType = Medical | Surgery | DOA | UnknownAdmissionType
-    and PIM2 =
-        {
-            PaO2_1 : float option
-            FiO2_1 : float option
-            BE_1 : float option
-            SBP_1 : float option
-            Ventilated : bool
-            AdmissionPupils : PupilResponse
-            CardiacByPass : bool
-            CPRPreHosp : bool
-            CPRPrePICU : bool
-            LeukemiaOrLymphoma : bool
-            BMTransplant : bool
-            SpontCerebralHemorrhage : bool
-            CardioMyopathy : bool
-            SCID : bool
-            HIV : bool
-            NeuroDegenerative : bool
-            HLHS : bool
-        }
-    and PupilResponse = FixedDilated | NormalPupils | UnknownPupils
-    and RiskDiagnosis =
-        //0. geen van bovenstaande hoofdredenen
-        | NoRiscDiagnosis
-        //1. Pseudokroep [LowRisk PIM2&3]
-        | Croup
-        //2. Obstructieve slaap-apnoe (kan ook met ‘Recovery’) [LowRisk PIM2&3]
-        | ObstructiveSleepApnea
-        //3. Bronchiolitis [LowRisk PIM2&3]
-        | Bronchiolitis
-        //4. Astma [LowRisk PIM2&3]
-        | Astma
-        //5. Leverfalen, incl levertransplantatie (ook met ‘Recovery’) [HR PIM2]
-        | LiverFailurePostTx
-        //6. Convulsies [LowRisk PIM3]
-        | Convulsions
-        //7. Diabetische keto-acidose [LowRisk PIM2&3] (betekent ook 'acute diabtes' [PRISM3])
-        | DKA
-        //8. Leverfalen, exclusief opnames na recovery levertransplantatie [HR PIM2 & VHR PIM3]
-        | LiverFailure
-        //9. Necrotiserende enterocolitis [HR PIM3]
-        | NEC
-        //10. Acute Diabetes [PRISM3]
-        | AcuteDiabetes
-        //11. Niet-operatieve cardiovasculaire aandoeningen (bv: cardiomyopathie/myocarditis) [PRISM3]
-        | MedicalCardioVascular
+
+
 
     type ParsingError =
         | ParseError of string
@@ -2778,6 +2789,281 @@ module Patient =
     open Types
     
 
+    module PIM =
+        
+        let kiloPascalToMmHg n = n * 7.50061683
+
+
+        // PIM2
+        //High Risk Diagnoses include:
+        //Cardiac Arrest
+        //Cardiomyopathy or Myocarditis
+        //Severe Combined Immunodeficiency (SCID)
+        //Hypoplastic Left Heart Syndrome (HLHS)
+        //Leukemia or Lymphoma after first induction of chemotherapy
+        //Liver Failure as primary ICU admission reason
+        //HIV Positive
+        //Spontaneous Cerebral Hemorrhage (from any cause, except intracranial bleeding related to head trauma)
+        //Neurodegenerative Disorder
+        let pim2HighRisk =
+            [ CardiacArrest
+              CardiomyopathyOrMyocarditis
+              SevereCombinedImmuneDeficiency
+              HypoplasticLeftHeartSyndrome
+              LeukemiaorLymphoma
+              LiverFailure
+              HIVPositive
+              CerebralHemorrhage
+              NeurodegenerativeDisorder ]
+        //Low Risk Diagnoses include:
+        //Asthma
+        //Bronchiolitis
+        //Croup
+        //Obstructive Sleep Apnea (OSA)
+        //Diabetic Ketoacidosis (DKA)
+        let pim2LowRisk =
+            [ Asthma
+              Bronchiolitis
+              Croup
+              ObstructiveSleepApnea
+              DiabeticKetoacidosis ]
+        // PIM3
+        // Low-risk diagnosis:
+        //  asthma,
+        //  bronchiolitis,
+        //  croup,
+        //  obstructive sleep apnea,
+        //  diabetic ketoacidosis,
+        //  seizure disorder.
+        let pim3LowRisk =
+            [ Asthma
+              Bronchiolitis
+              Croup
+              ObstructiveSleepApnea
+              DiabeticKetoacidosis
+              SeizureDisorder ]
+        // High-risk diagnosis:
+        //  spontaneous cerebral hemorrhage,
+        //  cardiomyopathy or myocarditis,
+        //  hypoplastic left heart syndrome,
+        //  neurodegenerative disorder,
+        //  necrotizing enterocolitis.
+        let pim3HighRisk =
+            [ CerebralHemorrhage
+              CardiomyopathyOrMyocarditis
+              HypoplasticLeftHeartSyndrome
+              NeurodegenerativeDisorder
+              NecrotizingEnterocolitis ]
+        // Very high-risk diagnosis:
+        //  cardiac arrest preceding ICU admission,
+        //  severe combined immune deficiency,
+        //  leukemia or lymphoma after first induction,
+        //  bone marrow transplant recipient,
+        //  liver failure.
+        let pim3VeryHighRisk =
+            [ CardiacArrest
+              SevereCombinedImmuneDeficiency
+              LeukemiaorLymphoma
+              BoneMarrowTransplant
+              LiverFailure ]
+
+
+        let calcRiskFromScore score = Math.Exp(score) / (1. + Math.Exp(score))
+
+
+        // PIM2 score =
+        //    -0.9282(Elective) +
+        //    -1.0244(Recovery) +
+        //    0.7507(Bypass) +
+        //    1.6829(High-Risk) +
+        //    -1.577(Low-Risk) +
+        //    3.0791(Pupils) +
+        //    1.3352(Ventilator) +
+        //    0.01395(absolute value of SBP-120) +
+        //    0.1040(absolute value of base excess) +
+        //    0.2888(100 x FiO2 / PaO2) +
+        //    -4.8841
+        let calculatePIM2 (pim: PIM) =
+            let mapHighRisk rd =
+                pim2HighRisk
+                |> List.exists (fun d -> rd |> List.exists ((=) d))
+                |> fun b -> if b then 1.6829 |> Some else None
+
+            let mapLowRisk rd =
+                pim2LowRisk
+                |> List.exists (fun d -> rd |> List.exists ((=) d))
+                |> fun b -> if b then -1.577 |> Some else None
+
+            let paO2 =
+                pim.PaO2
+                |> Option.defaultValue 0.
+                |> kiloPascalToMmHg
+
+            let score =
+                [
+                    "elective",
+                    if pim.Urgency = Elective then -0.9282 else 0.
+                    "recovery",
+                    if pim.Recovery then -1.0244 else 0.
+                    "bypass",
+                    if pim.CardiacByPass then 0.7507 else 0.
+
+                    "risk diagnosis",
+                    [
+                        pim.RiskDiagnosis |> mapHighRisk
+                        // lowRisc
+                        pim.RiskDiagnosis |> mapLowRisk
+                    ]
+                    |> List.filter Option.isSome
+                    |> List.map Option.get
+                    |> function
+                    | [] -> 0.
+                    | xs -> xs |> List.max
+
+                    "pupils",
+                    pim.AdmissionPupils
+                    |> function
+                    | FixedDilated -> 3.0791
+                    | _ -> 0.
+                    "ventilator",
+                    if pim.Ventilated then 1.3352 else 0.
+                    "SBP",
+                    (((pim.SystolicBloodPressure
+                     |> Option.defaultValue 120.)
+                    - 120.)
+                    |> Math.Abs)
+                    * 0.01395
+                    "base excess",
+                    (pim.BaseExcess
+                    |> Option.defaultValue 0.
+                    |> Math.Abs)
+                    * 0.1040
+                    "fiO2",
+                    if paO2 > 0. then
+                      (((pim.FiO2 |> Option.defaultValue 0.) * 100.)
+                       / paO2)
+                      * 0.2888
+                    else
+                      0.
+                    "baseline",
+                    -4.8841
+                ]
+                |> List.mapi (fun i (l, v) ->
+                    //printfn "%i. %s: %f" (i + 1) l v
+                    v)
+                |> List.reduce (+)
+
+            let mort =
+                calcRiskFromScore score
+
+            { pim with
+                PIM2Score = Some score
+                PIM2Mortality = Some mort
+            }
+
+
+        // PIM3 score =
+        //  (3.8233 × pupillary reaction) +
+        //  (−0.5378 × elective admission) +
+        //  (0.9763 × mechanical ventilation) +
+        //  (0.0671 × [absolute {base excess}]) +
+        //  (−0.0431 × SBP) + (0.1716 × [SBP^2/1,000]) +
+        //  (0.4214 × [{FiO2 × 100}/PaO2]) +
+        //  (-1.2246 × bypass cardiac procedure) +
+        //  (-0.8762 × non-bypass cardiac procedure) +
+        //  (-1.5164 × noncardiac procedure) +
+        //  (1.6225 × very high-risk diagnosis) +
+        //  (1.0725 × high-risk diagnosis)
+        //  (-2.1766 × low-risk diagnosis) +
+        //  −1.7928
+        let calculatePIM3 (pim: PIM) =
+            let mapVeryHighRisk rd =
+                pim3VeryHighRisk
+                |> List.exists (fun d -> rd |> List.exists ((=) d))
+                |> fun b -> if b then 1.6225 |> Some else None
+
+            let mapHighRisk rd =
+                pim3HighRisk
+                |> List.exists (fun d -> rd |> List.exists ((=) d))
+                |> fun b -> if b then 1.0725 |> Some else None
+
+            let mapLowRisk rd =
+                pim3LowRisk
+                |> List.exists (fun d -> rd |> List.exists ((=) d))
+                |> fun b -> if b then -2.1766 |> Some else None
+
+            let paO2 =
+                pim.PaO2
+                |> Option.defaultValue 0.
+                |> kiloPascalToMmHg
+
+            let sbp =
+                pim.SystolicBloodPressure
+                |> Option.defaultValue 120.
+
+            let score =
+                [
+                    "urgency"
+                    , if pim.Urgency = Elective then -0.5378 else 0.
+                    "recovery"
+                    , if pim.Recovery && (not pim.CardiacByPass) then -0.8762 else 0.
+                    "bypass"
+                    , if pim.CardiacByPass then -1.2246 else 0.
+                    "no bypass"
+                    , if pim.CardiacNonByPass then -0.8762 else 0.
+                    "non cardiac"
+                    , if pim.NonCardiacProcedure then -1.5164 else 0.
+
+                    "risk diagnosis",
+                    [
+                        pim.RiskDiagnosis |> mapVeryHighRisk
+                        // highRisc
+                        pim.RiskDiagnosis |> mapHighRisk
+                        // lowRisc
+                        pim.RiskDiagnosis |> mapLowRisk
+                    ]
+                    |> List.filter Option.isSome
+                    |> List.map Option.get
+                    |> function
+                    | [] -> 0.
+                    | xs -> xs |> List.max
+
+                    "pupils",
+                    pim.AdmissionPupils
+                    |> function
+                    | FixedDilated -> 3.8233
+                    | _ -> 0.
+                    "vent"
+                    , if pim.Ventilated then 0.9763 else 0.
+                    "SBP"
+                    , (-0.0431 * sbp) + (0.1716 * ((sbp ** 2.) / 1000.))
+                    "base excess",
+                    (pim.BaseExcess
+                    |> Option.defaultValue 0.
+                    |> Math.Abs)
+                    * 0.0671
+                    "fiO2",
+                    if paO2 > 0. then
+                      (((pim.FiO2 |> Option.defaultValue 0.) * 100.)
+                       / paO2)
+                      * 0.4214
+                    else
+                      0.
+                    "baseline",
+                    -1.7928
+                ]
+                |> List.mapi (fun i (l, v) ->
+//                    printfn "%i. %s: %f" (i + 1) l v
+                    v)
+                |> List.reduce (+)
+
+            { pim with
+                PIM3Score = Some score
+                PIM3Mortality = score |> calcRiskFromScore |> Some
+            }
+
+
+
     let create hn bd ps dd dm =
         {
             HospitalNumber = hn
@@ -2817,17 +3103,7 @@ module Patient =
         systolicBP
         ventilated
         pupils
-        cardiacByPass
-        cprPreHosp
-        cprPrePICU
-        leukemia
-        bmt
-        cerebralHemorrhage
-        cardioMyopathie
-        scid
-        hiv
-        neuro
-        hlhs =
+        cardiacByPass =
 
         {
             HospitalNumber = hospitalNumber
@@ -2844,25 +3120,26 @@ module Patient =
             TempMin12 = tempMin12
             TempMax12 = tempMax12
             RiskDiagnosis = riskDiagnosis
-            PIM2 = {
-                PaO2_1 = paO2
-                FiO2_1 = fiO2
-                BE_1 = be
-                SBP_1 = systolicBP
+            PIM = {
+                Urgency = urgency
+                Recovery = recovery
+                RiskDiagnosis = riskDiagnosis
+                CardiacByPass = cardiacByPass
+                CardiacNonByPass = false //cardiacNonByPass
+                NonCardiacProcedure = false //nonCardiacProcedure
                 Ventilated = ventilated
                 AdmissionPupils = pupils
-                CardiacByPass = cardiacByPass
-                CPRPreHosp = cprPreHosp
-                CPRPrePICU = cprPrePICU
-                LeukemiaOrLymphoma = leukemia
-                BMTransplant = bmt
-                SpontCerebralHemorrhage = cerebralHemorrhage
-                CardioMyopathy = cardioMyopathie
-                SCID = scid
-                HIV = hiv
-                NeuroDegenerative = neuro
-                HLHS = hlhs
+                PaO2 = paO2
+                FiO2 = fiO2
+                BaseExcess = be
+                SystolicBloodPressure = systolicBP
+                PIM2Score = None
+                PIM2Mortality = None
+                PIM3Score = None
+                PIM3Mortality = None
             }
+            |> PIM.calculatePIM2
+            |> PIM.calculatePIM3
         }
 
     let picuAdmissionToString (a : PICUAdmission) =
@@ -2892,155 +3169,6 @@ module Patient =
                 |> hospitalAdmissionToString
                 |> List.map (sprintf "%s %s" s))
 
-
-    let kiloPascalToMmHg n = n * 7.50061683
-
-
-    // PIM2 score =
-    //    -0.9282(Elective) +
-    //    -1.0244(Recovery) +
-    //    0.7507(Bypass) +
-    //    1.6829(High-Risk) +
-    //    -1.577(Low-Risk) +
-    //    3.0791(Pupils) +
-    //    1.3352(Ventilator) +
-    //    0.01395(absolute value of SBP-120) +
-    //    0.1040(absolute value of base excess) +
-    //    0.2888(100 x FiO2 / PaO2) +
-    //    -4.8841
-    let calculatePIM2 urgency recovery riscDiagn (pim2 : PIM2) =
-        let mapHighRisk = function
-        | LiverFailure
-        | LiverFailurePostTx -> 1.
-        | _ -> 0.
-
-        let mapLowRisk = function
-        | Croup
-        | ObstructiveSleepApnea
-        | Astma
-        | DKA -> 1.
-        | _   -> 0.
-    
-        let paO2 =
-            pim2.PaO2_1
-            |> Option.defaultValue 1.
-        
-        [
-            // elective
-            if urgency = Elective then -0.9282 else 0.
-            // recovery
-            if recovery then -1.0244 else 0.
-            // bypass
-            if pim2.CardiacByPass then 0.7507 else 0.
-            // highRisc
-            [LiverFailure; LiverFailurePostTx]
-            |> List.exists ((=) riscDiagn)
-            |> fun b ->
-                b || pim2.CPRPreHosp || pim2.CPRPrePICU
-                  || pim2.CardioMyopathy || pim2.SCID
-                  || pim2.HLHS || pim2.LeukemiaOrLymphoma
-                  || pim2.HIV || pim2.SpontCerebralHemorrhage
-                  || pim2.NeuroDegenerative
-            |> fun b -> if b then 1.6829 else 0.
-            // lowRisc
-            [
-                Croup
-                ObstructiveSleepApnea
-                Bronchiolitis
-                Astma
-                DKA
-            ]
-            |> List.exists ((=) riscDiagn)
-            |> fun b -> if b then -1.577 else 0.
-            // pupils =
-            pim2.AdmissionPupils
-            |> function
-            | FixedDilated -> 3.0791
-            | _            -> 0.
-            // vent
-            if pim2.Ventilated then 1.3352 else 0.
-            // SBP
-            (((pim2.SBP_1 |> Option.defaultValue 120.) - 120.) |> Math.Abs) * 0.01395
-            // be
-            (pim2.BE_1 |> Option.defaultValue 0. |> Math.Abs) * 0.1040
-            // fiO2 =
-            (((pim2.FiO2_1 |> Option.defaultValue 0.) * 100.) / paO2) * 0.2888
-            -4.8841
-        ]
-        |> List.mapi (fun i v ->
-            printfn "%i %f" i v
-            v
-        )
-        |> List.reduce (+)
-        |> fun v -> printfn "score: %f" v; v
-        |> fun score ->
-            Math.Exp(score) / (1. + Math.Exp(score))
-
-
-
-module TestRisk =
-
-
-    open Types
-    open Patient
-
-    let test1PIM2 () =
-        // PIM2 val =
-        // − (0.9282 * 1)
-        // − (1.0244 * 1)
-        // + (0.7507 * 1)
-        // + (1.6829 * 1)
-        // − (1.5770 * 0)
-        // + (3.0791 * 0)
-        // + (1.3352 * 1)
-        // + (0.01395 * [absolute (55–120))
-        // + (0.104 * |−6.0|)
-        // + (0.2888 * (100 * 0.5/110))
-        // − 4.8841 = −1.4059.
-        {
-            PaO2_1 = (Some 120.)
-            FiO2_1 = None
-            BE_1 = (Some -6.)
-            SBP_1 = Some(55.)
-            Ventilated = true
-            AdmissionPupils = UnknownPupils
-            CardiacByPass = true
-            CPRPreHosp = false
-            CPRPrePICU = false
-            LeukemiaOrLymphoma = false
-            BMTransplant = false
-            SpontCerebralHemorrhage = false
-            CardioMyopathy = false
-            SCID = false
-            HIV = false
-            NeuroDegenerative = false
-            HLHS = false
-        }
-        |> calculatePIM2 Elective true LiverFailure
-        |> fun n -> n * 100.
-
-    let test2PIM2 () =
-        {
-            PaO2_1 = None
-            FiO2_1 = None
-            BE_1 = None
-            SBP_1 = None
-            Ventilated = false
-            AdmissionPupils = PupilResponse.FixedDilated
-            CardiacByPass = false
-            CPRPreHosp = false
-            CPRPrePICU = false
-            LeukemiaOrLymphoma = false
-            BMTransplant = false
-            SpontCerebralHemorrhage = false
-            CardioMyopathy = false
-            SCID = false
-            HIV = false
-            NeuroDegenerative = false
-            HLHS = false
-        }
-        |> calculatePIM2 NotElective false NoRiscDiagnosis
-        |> fun n -> n * 100.
 
             
 
@@ -3135,20 +3263,31 @@ module Parsing =
                 |> Some
 
 
-        let mapRiscDiagnosis = function
-            | s when s = "0" -> NoRiscDiagnosis
-            | s when s = "1" -> Croup
-            | s when s = "2" -> ObstructiveSleepApnea
-            | s when s = "3" -> Bronchiolitis
-            | s when s = "4" -> Astma
-            | s when s = "5" -> LiverFailurePostTx
-            | s when s = "6" -> Convulsions
-            | s when s = "7" -> DKA
-            | s when s = "8" -> LiverFailure
-            | s when s = "9" -> NEC
-            | s when s = "10" -> AcuteDiabetes
-            | s when s = "11" -> MedicalCardioVascular
-            | _ -> NoRiscDiagnosis
+        let mapRiscDiagnosis d leukemia bmt cva card scid hiv neuro hlhs =
+            match d with
+            | s when s = "0" -> []
+            | s when s = "1" -> [ Croup ]
+            | s when s = "2" -> [ ObstructiveSleepApnea ]
+            | s when s = "3" -> [ Bronchiolitis ]
+            | s when s = "4" -> [ Asthma ]
+            | s when s = "5" -> [ LiverFailure ]
+            | s when s = "6" -> [ SeizureDisorder ]
+            | s when s = "7" -> [ DiabeticKetoacidosis ]
+            | s when s = "8" -> [ LiverFailure ]
+            | s when s = "9" -> [ NecrotizingEnterocolitis ]
+            | s when s = "10" -> [ DiabeticKetoacidosis ]
+            | s when s = "11" -> [ CardiomyopathyOrMyocarditis ]
+            | _ -> []
+            |> List.append [
+                if leukemia = "1" then LeukemiaorLymphoma
+                if bmt = "1" then BoneMarrowTransplant
+                if cva = "1" then CerebralHemorrhage
+                if card = "1" then CardiomyopathyOrMyocarditis
+                if scid = "1" then SevereCombinedImmuneDeficiency
+                if hiv = "1" then HIVPositive
+                if neuro = "1" then NeurodegenerativeDisorder
+                if hlhs = "1" then HypoplasticLeftHeartSyndrome
+            ]
 
 
         let mapUrgency = function
@@ -3311,7 +3450,9 @@ module Parsing =
             else Result.okIfNone [| sprintf "couldn't parse int %s" s |] (Parsers.parseInt s)
         let mapAdmType = Parsers.mapAdmissionType >> Result.ok
         let mapUrgency = Parsers.mapUrgency >> Result.ok
-        let mapRisk    = Parsers.mapRiscDiagnosis >> Result.ok
+        let mapRisk d leukemia bmt cva card scid hiv neuro hlhs =
+            Parsers.mapRiscDiagnosis d leukemia bmt cva card scid hiv neuro hlhs
+            |> Result.ok
         let mapPupils  = Parsers.mapPupils >> Result.ok
 
         picuData
@@ -3339,7 +3480,15 @@ module Parsing =
             <*> parseInt d.``adm-length``
             <*> parseFloat d.``t-min12``
             <*> parseFloat d.``t-max12``
-            <*> mapRisk d.``risicodiag-hoofd``
+            <*> (mapRisk d.``risicodiag-hoofd``
+                         d.``leukemie-riskpim``
+                         d.``bmtrecipient-riskpim``
+                         d.``sponthersenbl-riskpim``
+                         d.``cardmyopath-riskpim``
+                         d.``scid-riskpim``
+                         d.``hiv-riskpim``
+                         d.``neurodegen-riskpim``
+                         d.``hypoplast-riskpim``)
             <*> parseFloat d.``pao2-0``
             <*> parseFloat d.``fio2-0``
             <*> parseFloat d.``be-0``
@@ -3347,16 +3496,8 @@ module Parsing =
             <*> parseBool d.ventilated
             <*> mapPupils d.admpupils
             <*> parseBool d.bypass
-            <*> parseBool d.``cprprehosp-riskpim``
-            <*> parseBool d.``cprprepicu-riskpim``
-            <*> parseBool d.``leukemie-riskpim``
-            <*> parseBool d.``bmtrecipient-riskpim``
-            <*> parseBool d.``sponthersenbl-riskpim``
-            <*> parseBool d.``cardmyopath-riskpim``
-            <*> parseBool d.``scid-riskpim``
-            <*> parseBool d.``hiv-riskpim``
-            <*> parseBool d.``neurodegen-riskpim``
-            <*> parseBool d.``hypoplast-riskpim``
+            //<*> parseBool d.``cprprehosp-riskpim``
+            //<*> parseBool d.``cprprepicu-riskpim``
         )
         |> Array.toList
         |> Result.foldOk
@@ -3436,6 +3577,8 @@ module Statistics =
         member val PICUDays = 0 with get, set
         member val Deaths = 0 with get, set
         member val PICUDeaths = 0 with get, set
+        member val PIM2Mortality = 0. with get, set
+        member val PIM3Mortality = 0. with get, set
         member val DischargeReasons : (string * int) list = [] with get, set
 
 
@@ -3588,6 +3731,28 @@ module Statistics =
             |> List.filter (fun p -> p.PatientState = Dead)
             |> List.length
 
+        stats.Totals.PIM2Mortality <-
+            pats
+            |> List.map (fun p -> p.picuAdmission)
+            |> List.filter (fun pa ->
+                pa.DischargeDate |>  Option.isSome &&
+                pa.PIM.PIM2Mortality |> Option.isSome
+            )
+            |> List.map (fun pa -> pa.PIM.PIM2Mortality |> Option.get)
+            |> List.filter (Double.IsNaN >> not)
+            |> List.sum
+
+        stats.Totals.PIM3Mortality <-
+            pats
+            |> List.map (fun p -> p.picuAdmission)
+            |> List.filter (fun pa ->
+                pa.DischargeDate |>  Option.isSome &&
+                pa.PIM.PIM3Mortality |> Option.isSome
+            )
+            |> List.map (fun pa -> pa.PIM.PIM3Mortality |> Option.get)
+            |> List.filter (Double.IsNaN >> not)
+            |> List.sum
+
         stats.Totals.DischargeReasons <-
             pats
             |> List.countBy (fun p -> p.picuAdmission.DischargeReason)
@@ -3661,6 +3826,32 @@ module Statistics =
                     | Some dt -> dt.Year = tot.Year
                 )
                 |> List.length
+
+
+            tot.Totals.PIM2Mortality <-
+                pats
+                |> List.map (fun p -> p.picuAdmission)
+                |> List.filter (fun pa ->
+                    pa.DischargeDate |>  Option.isSome &&
+                    pa.PIM.PIM2Mortality |> Option.isSome
+                )
+                |> List.filter (fun pa -> pa.DischargeDate.Value.Year = yr.Value)
+                |> List.map (fun pa -> pa.PIM.PIM2Mortality |> Option.get)
+                |> List.filter (Double.IsNaN >> not)
+                |> List.sum
+
+            tot.Totals.PIM3Mortality <-
+                pats
+                |> List.map (fun p -> p.picuAdmission)
+                |> List.filter (fun pa ->
+                    pa.DischargeDate |>  Option.isSome &&
+                    pa.PIM.PIM3Mortality |> Option.isSome
+                )
+                |> List.filter (fun pa -> pa.DischargeDate.Value.Year = yr.Value)
+                |> List.map (fun pa -> pa.PIM.PIM3Mortality |> Option.get)
+                |> List.filter (Double.IsNaN >> not)
+                |> List.sum
+
         )
         // PICU admission statistics
         yrTots
@@ -3797,15 +3988,19 @@ module Statistics =
         [<Literal>]
         let patTot = "* Totaal aantal patienten: {0}"
         [<Literal>]
-        let adsTot = "* Totaal aantal opnames {0}"
+        let adsTot = "* Totaal aantal opnames: {0}"
         [<Literal>]
-        let disTot = "* Totaal aantal ontslagen {0}"
+        let disTot = "* Totaal aantal ontslagen: {0}"
         [<Literal>]
-        let adtTot = "* Totaal aantal opgenomen {0}"
+        let adtTot = "* Totaal aantal opgenomen: {0}"
         [<Literal>]
-        let dthTot = "* Totaal aantal overleden {0}"
+        let dthTot = "* Totaal aantal overleden: {0}"
         [<Literal>]
-        let dayTot = "* Totaal aantal verpleegdagen {0}"
+        let dayTot = "* Totaal aantal verpleegdagen: {0}"
+        [<Literal>]
+        let estPIM2 = "* Geschatte PIM2 mortaliteit: {0:F0}"
+        [<Literal>]
+        let estPIM3 = "* Geschatte PIM3 mortaliteit: {0:F0}"
         [<Literal>]
         let yearTitle = "### Rapportage van {0}"
         [<Literal>]
@@ -3824,6 +4019,8 @@ module Statistics =
                 |> StringBuilder.appendLineFormat Literals.adsTot [ stat.Totals.Admissions |> box ]
                 |> StringBuilder.appendLineFormat Literals.disTot [ stat.Totals.Discharged |> box ]
                 |> StringBuilder.appendLineFormat Literals.dthTot [ stat.Totals.Deaths |> box ]
+                |> StringBuilder.appendLineFormat Literals.estPIM2 [ stat.Totals.PIM2Mortality |> box ]
+                |> StringBuilder.appendLineFormat Literals.estPIM3 [ stat.Totals.PIM3Mortality |> box ]
                 |> StringBuilder.appendLineFormat Literals.dayTot [ stat.Totals.PICUDays |> box ]
                 |> StringBuilder.appendLine "#### Ontslag redenen"
                 |> fun sb ->
@@ -3905,6 +4102,8 @@ module Statistics =
         |> StringBuilder.appendLineFormat Literals.disTot [ stats.Totals.Discharged |> box ]
         |> StringBuilder.appendLineFormat Literals.dthTot [ stats.Totals.Deaths |> box ]
         |> StringBuilder.appendLineFormat Literals.dayTot [ stats.Totals.PICUDays |> box ]
+        |> StringBuilder.appendLineFormat Literals.estPIM2 [ stats.Totals.PIM2Mortality |> box ]
+        |> StringBuilder.appendLineFormat Literals.estPIM3 [ stats.Totals.PIM3Mortality |> box ]
         |> StringBuilder.appendLine "#### Ontslag redenen"
         |> fun sb ->
             stats.Totals.DischargeReasons
@@ -3945,6 +4144,16 @@ module Statistics =
 
 let pats = Parsing.parseMRDM ()
 
+
+pats
+|> Result.valueOrDefault (fun _ -> [||])
+|> Array.toList
+|> List.collect (fun p -> p.HospitalAdmissions)
+|> List.collect (fun ha -> ha.PICUAdmissions)
+|> List.map (fun pa -> pa.PIM.PIM2Mortality)
+|> List.map (Option.get)
+|> List.filter (Double.IsNaN)
+|> List.length
 
 
 
