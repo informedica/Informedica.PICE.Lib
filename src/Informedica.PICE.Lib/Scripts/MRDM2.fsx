@@ -3063,14 +3063,13 @@ module Patient =
                 [
                     "urgency"
                     , if pim.Urgency = Elective then -0.5378 else 0.
-                    "recovery"
-                    , if pim.Recovery && (not pim.CardiacByPass) then -0.8762 else 0.
                     "bypass"
-                    , if pim.CardiacByPass then -1.2246 else 0.
+                    , if pim.Recovery && pim.CardiacByPass then -1.2246 else 0.
                     "no bypass"
-                    , if pim.CardiacNonByPass then -0.8762 else 0.
+                    , if pim.Recovery && pim.CardiacNonByPass then -0.8762 else 0.
                     "non cardiac"
-                    , if pim.NonCardiacProcedure then -1.5164 else 0.
+                    , if pim.Recovery && pim.NonCardiacProcedure ||
+                         pim.Recovery && not (pim.CardiacByPass || pim.NonCardiacProcedure) then -1.5164 else 0.
 
                     "risk diagnosis",
                     [
@@ -3791,6 +3790,7 @@ module Validation =
 module Parsing =
 
     open System.Diagnostics
+    open System.Globalization
 
     open Types
     open MRDM
@@ -3811,7 +3811,7 @@ module Parsing =
 
 
         let parseFloat s =
-            match Double.TryParse(s) with
+            match Double.TryParse(s,NumberStyles.Any,  CultureInfo.InvariantCulture) with
             | true, x  -> Some x
             | false, _ -> None
 
@@ -4896,3 +4896,58 @@ pats
 ---
 """
 |> Markdown.toBrowser
+
+
+
+pats
+|> Result.valueOrDefault (fun _ -> [||]) 
+|> Array.toList
+|> List.take 100
+|> List.iter (fun p ->
+    printfn "%A" p
+)
+
+"1,5"
+|> Parsing.Parsers.parseFloat
+
+MRDM.mrdmPicu.Data
+|> Seq.take 100
+|> Seq.iter (fun r->
+    r.``ph-min12``
+    |> printfn "%A"
+)
+
+open Types
+
+{ Urgency =
+           NotElective
+  Recovery = true
+  RiskDiagnosis = []
+  CardiacByPass =
+                 false
+  CardiacNonByPass =
+                    false
+  NonCardiacProcedure =
+                       false
+  Ventilated = false
+  AdmissionPupils =
+                   NormalPupils
+  PaO2 = None
+  FiO2 = None
+  BaseExcess =
+              Some 1.4
+  SystolicBloodPressure =
+                         None
+  PIM2Score =
+             Some
+               -5.7629
+  PIM2Mortality =
+                 Some
+                   0.003132145453
+  PIM3Score =
+             Some
+               -5.27602
+  PIM3Mortality =
+                 Some
+                   0.005086731921 }
+|> Patient.PIM.calculatePIM3
