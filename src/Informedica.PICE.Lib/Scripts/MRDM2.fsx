@@ -269,62 +269,64 @@ module Result =
 
 module Types =
 
-    type Item =
-        | BloodPressure
-        | Temperature
-        | MentalStatus
-        | HeartRate
-        | Creatinine
-        | Urea
-        | ProthPT
-        | ProthPTT
-        | Pupils
-        | Ph
-        | TotalCO2
-        | PCO2
-        | PaO2
-        | Glucose
-        | Potassium
-        | WBC
-        | Platelets
+    module PRISM =
 
-    type AgePRISM3 = | Neonate | Infant | Child | Adolescent | AllMinNeonate | AnyAge
+        type Item =
+            | BloodPressure
+            | Temperature
+            | MentalStatus
+            | HeartRate
+            | Creatinine
+            | Urea
+            | ProthPT
+            | ProthPTT
+            | Pupils
+            | Ph
+            | TotalCO2
+            | PCO2
+            | PaO2
+            | Glucose
+            | Potassium
+            | WBC
+            | Platelets
 
-    type AgePRISM4 = | TwoWeeks | OneMonth | OneYear | EightTeen | UnknownAge
+        type AgePRISM3 = | Neonate | Infant | Child | Adolescent | AllMinNeonate | AnyAge
 
-    type AdmissionSource =
-        | Recovery
-        | AnotherHospital
-        | InHospital
-        | EmergencyUnit
-        | UnknownAdmissionSource
+        type AgePRISM4 = | TwoWeeks | OneMonth | OneYear | EightTeen | UnknownAge
 
-    type Value =
-        | NoValue
-        | OneValue of float
-        | TwoValues of float * float
+        type AdmissionSource =
+            | Recovery
+            | AnotherHospital
+            | InHospital
+            | EmergencyUnit
+            | UnknownAdmissionSource
+
+        type Value =
+            | NoValue
+            | OneValue of float
+            | TwoValues of float * float
 
     type PRISM =
         {
             Age : DateTime option
-            SystolicBloodPressure : Value
-            Temperature : Value
-            MentalStatus : Value
-            HeartRate : Value
-            PupilsFixed : Value
-            PH : Value
-            TotalCO2 : Value
-            PCO2 : Value
-            PaO2 : Value
-            Glucose : Value
-            Potassium : Value
-            Creatinine : Value
-            Urea : Value
-            WhiteBloodCount : Value
-            PT : Value
-            PTT : Value
-            Platelets : Value
-            AdmissionSource : AdmissionSource
+            SystolicBloodPressure : PRISM.Value
+            Temperature : PRISM.Value
+            MentalStatus : PRISM.Value
+            HeartRate : PRISM.Value
+            PupilsFixed : PRISM.Value
+            PH : PRISM.Value
+            TotalCO2 : PRISM.Value
+            PCO2 : PRISM.Value
+            PaO2 : PRISM.Value
+            Glucose : PRISM.Value
+            Potassium : PRISM.Value
+            Creatinine : PRISM.Value
+            Urea : PRISM.Value
+            WhiteBloodCount : PRISM.Value
+            PT : PRISM.Value
+            PTT : PRISM.Value
+            Platelets : PRISM.Value
+            AdmissionSource : PRISM.AdmissionSource
             CPR24HourBefore : bool
             Cancer : bool
             LowRiskPrimary : bool
@@ -333,16 +335,47 @@ module Types =
             PRISM4Mortality : float option
         }
 
+    module PIM =
+
+        type AdmissionUrgency =
+            | Elective
+            | NotElective
+            | UnknownUrgency
+
+        type PupilResponse =
+            | FixedDilated
+            | NormalPupils
+            | UnknownPupils
+
+        type RiskDiagnosis =
+            | Asthma
+            | BoneMarrowTransplant
+            | Bronchiolitis
+            | CardiacArrest
+            | CardiomyopathyOrMyocarditis
+            | CerebralHemorrhage
+            | Croup
+            | DiabeticKetoacidosis
+            | HIVPositive
+            | HypoplasticLeftHeartSyndrome
+            | LeukemiaorLymphoma
+            | LiverFailure
+            | NecrotizingEnterocolitis
+            | NeurodegenerativeDisorder
+            | ObstructiveSleepApnea
+            | SeizureDisorder
+            | SevereCombinedImmuneDeficiency
+
     type PIM =
         {
-            Urgency: AdmissionUrgency
+            Urgency: PIM.AdmissionUrgency
             Recovery: bool
-            RiskDiagnosis: RiskDiagnosis list
+            RiskDiagnosis: PIM.RiskDiagnosis list
             CardiacByPass: bool
             CardiacNonByPass: bool
             NonCardiacProcedure: bool
             Ventilated: bool
-            AdmissionPupils: PupilResponse
+            AdmissionPupils: PIM.PupilResponse
             PaO2: float option
             FiO2: float option
             BaseExcess: float option
@@ -352,41 +385,6 @@ module Types =
             PIM3Score : float option
             PIM3Mortality : float option
         }
-
-    and AdmissionUrgency =
-        | Elective
-        | NotElective
-        | UnknownUrgency
-
-    and AdmissionType =
-        | Medical
-        | Surgery
-        | DOA
-        | UnknownAdmissionType
-
-    and PupilResponse =
-        | FixedDilated
-        | NormalPupils
-        | UnknownPupils
-
-    and RiskDiagnosis =
-        | Asthma
-        | BoneMarrowTransplant
-        | Bronchiolitis
-        | CardiacArrest
-        | CardiomyopathyOrMyocarditis
-        | CerebralHemorrhage
-        | Croup
-        | DiabeticKetoacidosis
-        | HIVPositive
-        | HypoplasticLeftHeartSyndrome
-        | LeukemiaorLymphoma
-        | LiverFailure
-        | NecrotizingEnterocolitis
-        | NeurodegenerativeDisorder
-        | ObstructiveSleepApnea
-        | SeizureDisorder
-        | SevereCombinedImmuneDeficiency
 
     type Patient =
         {
@@ -411,19 +409,24 @@ module Types =
             AdmissionDate : DateTime option
             DischargeDate : DateTime option
             DischargeReason : string
-            Urgency : AdmissionUrgency
             AdmissionType : AdmissionType
-            Recovery : bool
             AdmissionIndication : string
             ReferingSpecialism : string
+            PrimaryDiagnosis : string list
+            SecondaryDiagnosis : string list
+            Diagnoses : string list
             AdmissionWeight : float option
             AdmissionLength : int option
-            TempMin12 : float option
-            TempMax12 : float option
-            RiskDiagnosis : RiskDiagnosis list
             PIM : PIM
             PRISM : PRISM
         }
+    and AdmissionType =
+        | Medical
+        | Surgery
+        | DOA
+        | UnknownAdmissionType
+
+
 
     type ParsingError =
         | ParseError of string
@@ -432,7 +435,6 @@ module Types =
     type ValidationError =
         | NotValid of Patient * string
         | IsValid
-
 
 
 
@@ -2846,11 +2848,14 @@ module Patient =
     
 
     let kiloPascalToMmHg n = n * 7.50061683
-
+    
+    
+    let calcRiskFromScore score = Math.Exp(score) / (1. + Math.Exp(score))
+    
 
     module PIM =
         
-
+        open PIM
 
         // PIM2
         //High Risk Diagnoses include:
@@ -2924,10 +2929,6 @@ module Patient =
               LeukemiaorLymphoma
               BoneMarrowTransplant
               LiverFailure ]
-
-
-        let calcRiskFromScore score = Math.Exp(score) / (1. + Math.Exp(score))
-
 
         // PIM2 score =
         //    -0.9282(Elective) +
@@ -3063,13 +3064,12 @@ module Patient =
                 [
                     "urgency"
                     , if pim.Urgency = Elective then -0.5378 else 0.
-                    "bypass"
-                    , if pim.Recovery && pim.CardiacByPass then -1.2246 else 0.
-                    "no bypass"
-                    , if pim.Recovery && pim.CardiacNonByPass then -0.8762 else 0.
-                    "non cardiac"
-                    , if pim.Recovery && pim.NonCardiacProcedure ||
-                         pim.Recovery && not (pim.CardiacByPass || pim.NonCardiacProcedure) then -1.5164 else 0.
+
+                    if pim.Recovery then
+                        match pim.CardiacByPass, pim.CardiacNonByPass with
+                        | true, _     -> "recovery bypass",      -1.2246
+                        | false, true -> "recovery non-bypass",  -0.8762
+                        | _ ->           "recovery non-cardiac", -1.5164
 
                     "risk diagnosis",
                     [
@@ -3124,6 +3124,8 @@ module Patient =
     module PRISM =
 
         open System
+
+        open PRISM
 
         type Mapping =
             {
@@ -3220,7 +3222,7 @@ module Patient =
                 Age = None
                 SystolicBloodPressure = NoValue
                 Temperature = NoValue
-                MentalStatus = NoValue
+                MentalStatus = 15. |> OneValue
                 HeartRate = NoValue
                 PupilsFixed = NoValue
                 PH = NoValue
@@ -3546,8 +3548,7 @@ module Patient =
                         -5.776
                     ]
                     |> List.reduce (+)
-                    |> fun x ->
-                        Math.Exp(x) / (1. + Math.Exp(x))
+                    |> calcRiskFromScore
                     |> Some
                 | _ ->
                     printfn "not a valid score: %A" s
@@ -3638,28 +3639,26 @@ module Patient =
         =
         let mapOptToOneValue o =
             match o with
-            | Some v -> OneValue v
-            | None -> NoValue
+            | Some v -> PRISM.OneValue v
+            | None   -> PRISM.NoValue
 
         let mapOptToTwoValue o1 o2 =
             match o1, o2 with
-            | Some v1, Some v2 -> TwoValues (v1, v2)
-            | _ -> NoValue
+            | Some v1, Some v2 -> PRISM.TwoValues (v1, v2)
+            | _                -> PRISM.NoValue
         {
             HospitalNumber = hospitalNumber
             AdmissionDate = admissionDate
             DischargeDate = dischargeDate
             DischargeReason = dischargeReason
-            Urgency = urgency
-            AdmissionType = admissionType    
-            Recovery = recovery
+            AdmissionType = admissionType
             AdmissionIndication = admissionIndication
             ReferingSpecialism = referingSpecialism
+            PrimaryDiagnosis = []
+            SecondaryDiagnosis = []
+            Diagnoses = []
             AdmissionWeight = admissionWeight
             AdmissionLength = admissionLength
-            TempMin12 = tempMin12
-            TempMax12 = tempMax12
-            RiskDiagnosis = riskDiagnosis
             PIM =
                 {
                     Urgency = urgency
@@ -3686,7 +3685,11 @@ module Patient =
                     Age = None
                     SystolicBloodPressure = lowSystolicBP |> mapOptToOneValue
                     Temperature = mapOptToTwoValue tempMin12 tempMax12
-                    MentalStatus = mentalStatus |> mapOptToOneValue
+                    MentalStatus =
+                        match mentalStatus with
+                        | None   -> Some 15.
+                        | Some _ -> mentalStatus
+                        |> mapOptToOneValue
                     HeartRate = heartRate |> mapOptToOneValue
                     PupilsFixed = fixedPupils |> mapOptToOneValue
                     PH = mapOptToTwoValue pHLow pHHigh    
@@ -3737,7 +3740,6 @@ module Patient =
                 ha
                 |> hospitalAdmissionToString
                 |> List.map (sprintf "%s %s" s))
-
 
             
 
@@ -3836,40 +3838,40 @@ module Parsing =
         let mapRiscDiagnosis d leukemia bmt cva card scid hiv neuro hlhs =
             match d with
             | s when s = "0" -> []
-            | s when s = "1" -> [ Croup ]
-            | s when s = "2" -> [ ObstructiveSleepApnea ]
-            | s when s = "3" -> [ Bronchiolitis ]
-            | s when s = "4" -> [ Asthma ]
-            | s when s = "5" -> [ LiverFailure ]
-            | s when s = "6" -> [ SeizureDisorder ]
-            | s when s = "7" -> [ DiabeticKetoacidosis ]
-            | s when s = "8" -> [ LiverFailure ]
-            | s when s = "9" -> [ NecrotizingEnterocolitis ]
-            | s when s = "10" -> [ DiabeticKetoacidosis ]
-            | s when s = "11" -> [ CardiomyopathyOrMyocarditis ]
+            | s when s = "1" -> [ PIM.Croup ]
+            | s when s = "2" -> [ PIM.ObstructiveSleepApnea ]
+            | s when s = "3" -> [ PIM.Bronchiolitis ]
+            | s when s = "4" -> [ PIM.Asthma ]
+            | s when s = "5" -> [ PIM.LiverFailure ]
+            | s when s = "6" -> [ PIM.SeizureDisorder ]
+            | s when s = "7" -> [ PIM.DiabeticKetoacidosis ]
+            | s when s = "8" -> [ PIM.LiverFailure ]
+            | s when s = "9" -> [ PIM.NecrotizingEnterocolitis ]
+            | s when s = "10" -> [ PIM.DiabeticKetoacidosis ]
+            | s when s = "11" -> [ PIM.CardiomyopathyOrMyocarditis ]
             | _ -> []
             |> List.append [
-                if leukemia = "1" then LeukemiaorLymphoma
-                if bmt = "1" then BoneMarrowTransplant
-                if cva = "1" then CerebralHemorrhage
-                if card = "1" then CardiomyopathyOrMyocarditis
-                if scid = "1" then SevereCombinedImmuneDeficiency
-                if hiv = "1" then HIVPositive
-                if neuro = "1" then NeurodegenerativeDisorder
-                if hlhs = "1" then HypoplasticLeftHeartSyndrome
+                if leukemia = "1" then PIM.LeukemiaorLymphoma
+                if bmt = "1"      then PIM.BoneMarrowTransplant
+                if cva = "1"      then PIM.CerebralHemorrhage
+                if card = "1"     then PIM.CardiomyopathyOrMyocarditis
+                if scid = "1"     then PIM.SevereCombinedImmuneDeficiency
+                if hiv = "1"      then PIM.HIVPositive
+                if neuro = "1"    then PIM.NeurodegenerativeDisorder
+                if hlhs = "1"     then PIM.HypoplasticLeftHeartSyndrome
             ]
 
 
         let mapUrgency = function
-            | s when s = "10" -> NotElective
-            | s when s = "11" -> Elective
-            | _ -> UnknownUrgency
+            | s when s = "10" -> PIM.NotElective
+            | s when s = "11" -> PIM.Elective
+            | _ -> PIM.UnknownUrgency
 
 
         let mapPupils = function
-            | s when s = "1" -> FixedDilated
-            | s when s = "0" -> NormalPupils
-            | _ -> UnknownPupils
+            | s when s = "1" -> PIM.FixedDilated
+            | s when s = "0" -> PIM.NormalPupils
+            | _ -> PIM.UnknownPupils
 
 
         let mapPatientState = function
@@ -3899,11 +3901,11 @@ module Parsing =
         //102	NICU (IC-Neonatologie)
         //99	Onbekend
         let mapAdmissionSource = function
-            | s when s = "109"  -> Recovery
-            | s when s = "129"  -> AnotherHospital
-            | s when s = "115" || s = "107" -> EmergencyUnit
-            | s when s = "99"  || s = "77" -> UnknownAdmissionSource
-            | _ -> InHospital
+            | s when s = "109"  -> PRISM.Recovery
+            | s when s = "129"  -> PRISM.AnotherHospital
+            | s when s = "115" || s = "107" -> PRISM.EmergencyUnit
+            | s when s = "99"  || s = "77"  -> PRISM.UnknownAdmissionSource
+            | _ -> PRISM.InHospital
 
 
         let mapLowRiskPRISM s =
@@ -3976,7 +3978,8 @@ module Parsing =
         Result.either fOk fErr
 
 
-    let addPICUAdmissions (admissions : Result<PICUAdmission[] * string[], _>) =
+    let addPICUAdmissions (admissions : Result<PICUAdmission[] * string[], _>)
+                          (diagnoses : {| hn : string; ad: DateTime option; dd : DateTime option; pd: string; sd : string; dn : string |}[]) =
         let inPeriod dt1 dt2 dt3 dt4 =
             match dt1, dt2, dt3, dt4 with
             | Some d1, Some d2, Some d3, Some d4 -> d1 <= d3 && d2 >= d4
@@ -4003,6 +4006,13 @@ module Parsing =
                                                 inPeriod ha.AdmissionDate ha.DischargeDate pa.AdmissionDate pa.DischargeDate  
                                             )
                                             |> Array.map (fun pa ->
+                                                let diagnoses =
+                                                    diagnoses
+                                                    |> Array.filter (fun d ->
+                                                        d.hn = pa.HospitalNumber &&
+                                                        d.ad = pa.AdmissionDate &&
+                                                        d.dd = pa.DischargeDate
+                                                    )
                                                 { pa with
                                                     PRISM =
                                                         {
@@ -4010,6 +4020,24 @@ module Parsing =
                                                                 Age = p.BirthDate
                                                         }
                                                         |> PRISM.calculate
+                                                    PrimaryDiagnosis =
+                                                        diagnoses
+                                                        |> Array.map (fun d -> d.pd)
+                                                        |> Array.distinct
+                                                        |> Array.filter (isNullOrWhiteSpace >> not)
+                                                        |> Array.toList
+                                                    SecondaryDiagnosis =
+                                                        diagnoses
+                                                        |> Array.map (fun d -> d.pd)
+                                                        |> Array.distinct
+                                                        |> Array.filter (isNullOrWhiteSpace >> not)
+                                                        |> Array.toList
+                                                    Diagnoses =
+                                                        diagnoses
+                                                        |> Array.map (fun d -> d.pd)
+                                                        |> Array.distinct
+                                                        |> Array.filter (isNullOrWhiteSpace >> not)
+                                                        |> Array.toList
                                                 }
                                             )
                                             |> Array.toList
@@ -4041,7 +4069,7 @@ module Parsing =
                         distPats
                         |> Array.exists ((=) p) |> not
                     )
-                    |> Array.mapi (sprintf "%i. %A\n")
+                    |> Array.mapi (fun i p -> sprintf "%i. dupuplicate patient %s\n" i p.HospitalNumber)
 
                 distPats, msgs
 
@@ -4146,6 +4174,29 @@ module Parsing =
             printfn "parsing picu admissions"
             parsePICUAdmissions picuData
 
+        let picuDiagn =
+            mrdmDiagnos.Data
+            |> Seq.toArray
+            |> Array.map (fun r ->
+                {|
+                    hn = r.``ziekenhuis-episode-upn``
+                    ad = r.``adm-ic-admdate`` |> Parsers.parseDateOpt
+                    dd = r.``adm-ic-disdate`` |> Parsers.parseDateOpt
+                    pd =
+                        r.diagnose1
+                        |> Codes.find "diagnose1"
+                        |> Option.defaultValue ""
+                    sd =
+                        r.diagnose2
+                        |> Codes.find "diagnose2"
+                        |> Option.defaultValue ""
+                    dn =
+                        r.``bijkomende-diagnose``
+                        |> Codes.find "bijkomende-diagnose"
+                        |> Option.defaultValue ""
+                |}
+            )
+
         let parsePat i =
             timer.ElapsedMilliseconds
             |> printfn "%i: %i parse patient" i
@@ -4159,13 +4210,13 @@ module Parsing =
         let addPICU i =
             timer.ElapsedMilliseconds
             |> printfn "%i: %i add picu admission" i
-            addPICUAdmissions picuAdms
+            addPICUAdmissions picuAdms picuDiagn
 
         mrdmPatient.Data
         |> Seq.toArray
         |> Array.mapi parsePat
         |> Array.mapi parseHosp
-        |> Array.mapi addPICU
+        |> Array.mapi addPICU 
         |> filterDuplicateOrMore
 
 
@@ -4198,7 +4249,6 @@ module Statistics =
 
     open Types
     open Validation
-    open Parsing
 
 
     type Totals () =
@@ -4675,66 +4725,70 @@ module Statistics =
         let disReason = "* {0}: {1}"
 
     let toString (stats : Statistics) =
+        let printTotals n t (totals : Totals) sb =
+            sb
+            |> StringBuilder.appendLineFormat t [ n |> box ]
+            |> StringBuilder.appendLineFormat Literals.patTot [ totals.Patients |> box ]
+            |> StringBuilder.appendLineFormat Literals.adsTot [ totals.Admissions |> box ]
+            |> StringBuilder.appendLineFormat Literals.disTot [ totals.Discharged |> box ]
+            |> StringBuilder.appendLineFormat Literals.dthTot [ totals.Deaths |> box ]
+            |> StringBuilder.appendLineFormat Literals.estPIM2 [ totals.PIM2Mortality |> box ]
+            |> StringBuilder.appendLineFormat Literals.estPIM3 [ totals.PIM3Mortality |> box ]
+            |> StringBuilder.appendLineFormat Literals.dayTot [ totals.PICUDays |> box ]
+            |> StringBuilder.appendLine "#### Ontslag redenen"
+            |> fun sb ->
+                totals.DischargeReasons
+                |> List.fold (fun acc (s, c) ->
+                    acc
+                    |> StringBuilder.appendLineFormat Literals.disReason [ s |> box; c |> box ]
+                ) sb
+
+        let printMonthTabel (yrTot : YearTotals) sb =
+            let caps =
+                [
+                    "Maand"
+                    "Patienten"
+                    "Opnames"
+                    "Ontslagen"
+                    "Overleden"
+                    "Ligdagen"
+                ]
+                |> List.map (fun s -> "== " + s + " ==")
+                |> List.map box
+
+            let sb =
+                sb
+                |> StringBuilder.appendLine "#### Per maand"
+                |> StringBuilder.newLine
+                |> StringBuilder.appendLineFormat Literals.columns6 caps
+                |> StringBuilder.appendLine Literals.headers6
+
+            yrTot.MonthTotals
+            |> List.fold (fun acc stat ->
+                let mo =
+                    StringBuilder.builder ""
+                    |> StringBuilder.appendFormat Literals.monthTitle [ DateTime(2000, stat.Month, 1) |> box ]
+                let vals =
+                    [
+                        mo.ToString ()         |> box
+                        stat.Totals.Patients   |> box
+                        stat.Totals.Admissions |> box
+                        stat.Totals.Discharged |> box
+                        stat.Totals.Deaths     |> box
+                        stat.Totals.PICUDays   |> box
+                    ]
+        
+                acc
+                |> StringBuilder.appendLineFormat Literals.columns6 vals
+            ) sb
+
+
         let yrs =
             stats.YearTotals
             |> List.fold (fun acc stat ->
                 acc
-                
-                |> StringBuilder.appendLineFormat Literals.yearTitle [ stat.Year |> box ]
-                |> StringBuilder.appendLineFormat Literals.patTot [ stat.Totals.Patients |> box ]
-                |> StringBuilder.appendLineFormat Literals.adsTot [ stat.Totals.Admissions |> box ]
-                |> StringBuilder.appendLineFormat Literals.disTot [ stat.Totals.Discharged |> box ]
-                |> StringBuilder.appendLineFormat Literals.dthTot [ stat.Totals.Deaths |> box ]
-                |> StringBuilder.appendLineFormat Literals.estPIM2 [ stat.Totals.PIM2Mortality |> box ]
-                |> StringBuilder.appendLineFormat Literals.estPIM3 [ stat.Totals.PIM3Mortality |> box ]
-                |> StringBuilder.appendLineFormat Literals.dayTot [ stat.Totals.PICUDays |> box ]
-                |> StringBuilder.appendLine "#### Ontslag redenen"
-                |> fun sb ->
-                    stat.Totals.DischargeReasons
-                    |> List.fold (fun acc (s, c) ->
-                        acc
-                        |> StringBuilder.appendLineFormat Literals.disReason [ s |> box; c |> box ]
-                    ) sb
-
-                |> fun sb ->
-                    let caps =
-                        [
-                            "Maand"
-                            "Patienten"
-                            "Opnames"
-                            "Ontslagen"
-                            "Overleden"
-                            "Ligdagen"
-                        ]
-                        |> List.map (fun s -> "== " + s + " ==")
-                        |> List.map box
-
-                    let sb =
-                        sb
-                        |> StringBuilder.appendLine "#### Per maand"
-                        |> StringBuilder.newLine
-                        |> StringBuilder.appendLineFormat Literals.columns6 caps
-                        |> StringBuilder.appendLine Literals.headers6
-
-                    stat.MonthTotals
-                    |> List.fold (fun acc stat ->
-                        let mo =
-                            StringBuilder.builder ""
-                            |> StringBuilder.appendFormat Literals.monthTitle [ DateTime(2000, stat.Month, 1) |> box ]
-                        let vals =
-                            [
-                                mo.ToString ()         |> box
-                                stat.Totals.Patients   |> box
-                                stat.Totals.Admissions |> box
-                                stat.Totals.Discharged |> box
-                                stat.Totals.Deaths     |> box
-                                stat.Totals.PICUDays   |> box
-                            ]
-                            
-                        acc
-                        |> StringBuilder.appendLineFormat Literals.columns6 vals
-                    ) sb
-
+                |> printTotals stat.Year Literals.yearTitle stat.Totals
+                |> printMonthTabel stat
                 |> fun sb ->
                     sb
                     |> StringBuilder.newLine
@@ -4822,17 +4876,6 @@ module Statistics =
 let pats = Parsing.parseMRDM ()
 
 
-pats
-|> Result.valueOrDefault (fun _ -> [||])
-|> Array.toList
-|> List.collect (fun p -> p.HospitalAdmissions)
-|> List.collect (fun ha -> ha.PICUAdmissions)
-|> List.map (fun pa -> pa.PIM.PIM2Mortality)
-|> List.map (Option.get)
-|> List.filter (Double.IsNaN)
-|> List.length
-
-
 
 pats
 |> Result.valueOrDefault (fun _ -> [||]) 
@@ -4900,54 +4943,37 @@ pats
 
 
 pats
-|> Result.valueOrDefault (fun _ -> [||]) 
+|> Result.valueOrDefault (fun _ -> [||])
+|> Array.filter (fun p ->
+    p.HospitalAdmissions
+    |> List.filter (fun ha -> ha.AdmissionDate |> Option.isSome)
+    |> List.exists (fun ha ->
+        (ha.AdmissionDate |> Option.get).Year = 2019 &&
+        (ha.PICUAdmissions
+         |> List.exists (fun pa ->
+            pa.PRISM.PRISM4Mortality > Some 0.1
+         ))
+    )
+)
 |> Array.toList
 |> List.take 100
 |> List.iter (fun p ->
     printfn "%A" p
 )
 
-"1,5"
-|> Parsing.Parsers.parseFloat
 
-MRDM.mrdmPicu.Data
-|> Seq.take 100
-|> Seq.iter (fun r->
-    r.``ph-min12``
-    |> printfn "%A"
+pats
+|> Result.valueOrDefault (fun _ -> [||])
+|> Array.toList
+|> List.collect (fun p ->
+    p.HospitalAdmissions
+    |> List.collect (fun ha ->
+        ha.PICUAdmissions
+        |> List.map (fun pa -> pa.AdmissionDate, pa.PrimaryDiagnosis)
+    ) 
 )
+|> List.filter (fun (dt, ds) -> ds |> List.isEmpty |> not)
+|> List.minBy fst
 
-open Types
-
-{ Urgency =
-           NotElective
-  Recovery = true
-  RiskDiagnosis = []
-  CardiacByPass =
-                 false
-  CardiacNonByPass =
-                    false
-  NonCardiacProcedure =
-                       false
-  Ventilated = false
-  AdmissionPupils =
-                   NormalPupils
-  PaO2 = None
-  FiO2 = None
-  BaseExcess =
-              Some 1.4
-  SystolicBloodPressure =
-                         None
-  PIM2Score =
-             Some
-               -5.7629
-  PIM2Mortality =
-                 Some
-                   0.003132145453
-  PIM3Score =
-             Some
-               -5.27602
-  PIM3Mortality =
-                 Some
-                   0.005086731921 }
-|> Patient.PIM.calculatePIM3
+pats
+|> Result.getMessages
