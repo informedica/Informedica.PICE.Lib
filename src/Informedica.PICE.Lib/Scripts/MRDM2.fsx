@@ -18,6 +18,179 @@ fsi.AddPrinter<DateTime>(sprintf "%A")
 
 
 
+/// Function to perform a safe null check
+module NullCheck =
+
+    let nullOrDef f d v =
+        if v |> isNull then d
+        else v |> f
+
+    let nullOrDef2 f d v1 v2 =
+        if (v1 |> isNull) || (v2 |> isNull) then d
+        else f v1 v2
+        
+    let nullOrDef3 f d v1 v2 v3 =
+        if (v1 |> isNull) || (v2 |> isNull) || (v2 |> isNull) then d
+        else f v1 v2 v3
+
+
+
+/// Helper functions for `System.String`
+module String = 
+
+    open System
+    open System.Text.RegularExpressions
+
+
+    /// Apply `f` to string `s`
+    let apply f (s: string) = f s
+    
+    /// Utility to enable type inference
+    let get = apply id
+
+    /// Split string `s` at character `c`
+    let splitAt c s = 
+        s |> NullCheck.nullOrDef (fun s' -> (s' |> get).Split([|c|])) [||] 
+        
+    let arrayConcat (cs : char[]) = String.Concat(cs)
+
+    /// Check if string `s2` contains string `s1`
+    let contains= 
+        NullCheck.nullOrDef2 (fun s1 s2 -> (s2 |> get).Contains(s1)) false
+
+    /// Trim string `s`
+    let trim= 
+        NullCheck.nullOrDef (fun s -> (s |> get).Trim()) ""
+
+    /// Make string all lower chars
+    let toLower = 
+        NullCheck.nullOrDef (fun s -> (s |> get).ToLower()) ""
+
+    /// Make string all upper chars
+    let toUpper = 
+        NullCheck.nullOrDef (fun s -> (s |> get).ToUpper()) ""
+
+    /// Get the length of s
+    let length = 
+        NullCheck.nullOrDef (fun s -> (s |> get).Length) 0
+
+    /// Check if string is null or only white space
+    let isNullOrWhiteSpace = String.IsNullOrWhiteSpace
+
+    /// Check if string is null or only white space
+    let empty s = String.IsNullOrWhiteSpace(s)
+
+    /// Check if string is not null or only white space
+    let notEmpty = empty >> not
+
+    /// Replace `os` with `ns` in string `s`.
+    let replace =
+        NullCheck.nullOrDef3 (fun os ns s -> (s |> get).Replace(os, ns)) ""
+
+    /// Convert object to string
+    let toString o = 
+        o |> NullCheck.nullOrDef (fun o' ->  o'.ToString()) ""
+
+    /// Get a substring starting at `start` with length `length`
+    let subString start length = 
+        let sub s =
+            if start < 0 || s |> String.length < start + length || start + length < 0  then ""
+            else
+                let s' = if length < 0 then start + length else start
+                let l' = if length < 0 then -1 * length else length
+                s.Substring(s', l')
+        NullCheck.nullOrDef sub ""
+
+    /// Get the first character of a string
+    /// as a string
+    let firstStringChar = subString 0 1
+
+    /// Return the rest of a string as a string
+    let restString s = 
+        if s = "" then ""
+        else
+            subString 1 ((s |> length) - 1) s
+
+    let remove n s =
+        let l = String.length s - n
+        if l < 0 then "" else s |> subString 0 l
+
+    /// Make the first char of a string upper case
+    let firstToUpper = firstStringChar >> toUpper
+
+    /// Make the first character upper and the rest lower of a string
+    let capitalize s = 
+        if s = "" then ""
+        else
+            (s |> firstToUpper) + (s |> restString |> toLower)
+
+    /// Get all letters as a string list
+    let letters = 
+        ['a'..'z'] @ ['A'..'Z'] 
+        |> List.map string
+
+    /// Check if a string is a letter
+    let isLetter s = List.exists (fun s' -> s' = s) letters
+
+    let equals s1 s2 = s1 = s2
+
+    /// Check if string `s1` equals `s2` caps insensitive
+    let equalsCapInsens s1 s2 = s1 |> toLower |> trim = (s2 |> toLower |> trim) 
+
+    /// Split a string `s` at string `dels`
+    let split (dels: string) (s: string) = 
+        NullCheck.nullOrDef2 (fun (s': string) (dels': string) -> s'.Split(dels'.ToCharArray()) |> Array.toList) [] s dels
+
+    /// Check whether **s1** starts with
+    /// **s2** using string comparison **eqs**
+    let startsWithEqs eqs s2 s1 =
+        let sw s1 s2 =
+            if s2 |> String.length > (s1 |> String.length) then false
+            else
+                s1 |> subString 0 (s2 |> String.length) |> eqs s2
+        NullCheck.nullOrDef2 sw false s1 s2
+
+    /// Check whether **s1** starts with
+    /// **s2** caps sensitive
+    let startsWith = startsWithEqs equals
+
+    /// Check whether **s1** starts with
+    /// **s2** caps insensitive
+    let startsWithCapsInsens = startsWithEqs equalsCapInsens
+
+    let regex s = new Regex(s)
+
+    /// Count the number of times character
+    /// c appears in string t
+    let countChar c t =
+        if String.IsNullOrEmpty(c) then "Cannot count empty string in text: '" + t + "'" |> failwith
+        (c |> regex).Matches(t).Count
+
+    /// Count the number of times that a 
+    /// string t starts with character c
+    let countFirstChar c t =
+        let _, count = 
+            if String.IsNullOrEmpty(t) then (false, 0)
+            else
+                t |> Seq.fold(fun (flag, dec) c' -> if c' = c && flag then (true, dec + 1) else (false, dec)) (true, 0) 
+        count
+
+
+    let removeTextBetween start stop text =
+        let regs = @"\" + start + @"[^\" + stop + "]*]"
+
+        (regex regs).Replace(text, "")
+        |> trim
+
+
+    let removeTextBetweenBrackets = removeTextBetween "[" "]"
+        
+  
+    let removeBrackets (s: String) = 
+        (regex "\[[^\]]*]").Replace(s, "")
+
+
+
 module File =
 
     open System.IO
@@ -237,13 +410,13 @@ module Result =
         | Result.Ok(_, msgs) | Result.Error msgs -> msgs
 
 
-    let foldOk f results =
+    let foldOk results =
         results
-        |> Seq.fold (fun acc result ->
+        |> Array.fold (fun acc result ->
             match result with
             | Result.Ok (x, msgs1) ->
                 match acc with
-                | Result.Ok (xs, msgs2) -> okMsg ([|x|] |> Array.append xs) (msgs1 |> f x |> Array.append msgs2)
+                | Result.Ok (xs, msgs2) -> okMsg ([|x|] |> Array.append xs) (msgs1 |> Array.append msgs2)
                 | Result.Error _ -> acc
             | Result.Error msgs1 ->
                 match acc with
@@ -301,31 +474,29 @@ module Types =
             | EmergencyUnit
             | UnknownAdmissionSource
 
-        type Value =
-            | NoValue
-            | OneValue of float
-            | TwoValues of float * float
-
     type PRISM =
         {
             Age : DateTime option
-            SystolicBloodPressure : PRISM.Value
-            Temperature : PRISM.Value
-            MentalStatus : PRISM.Value
-            HeartRate : PRISM.Value
-            PupilsFixed : PRISM.Value
-            PH : PRISM.Value
-            TotalCO2 : PRISM.Value
-            PCO2 : PRISM.Value
-            PaO2 : PRISM.Value
-            Glucose : PRISM.Value
-            Potassium : PRISM.Value
-            Creatinine : PRISM.Value
-            Urea : PRISM.Value
-            WhiteBloodCount : PRISM.Value
-            PT : PRISM.Value
-            PTT : PRISM.Value
-            Platelets : PRISM.Value
+            SystolicBloodPressureMin : float option
+            TemperatureMin : float option
+            TemperatureMax : float option
+            MentalStatus : int option
+            HeartRateMax : int option
+            PupilsFixed : int option
+            PHMin : float option
+            PHMax : float option
+            BicarbonateMin : float option
+            BicarbonateMax : float option
+            PCO2Max : float option
+            PaO2Min : float option
+            GlucoseMax : float option
+            PotassiumMax : float option
+            CreatinineMax : float option
+            UreaMax : float option
+            WhiteBloodCountMin : float option
+            PTMax : float option
+            PTTMax : float option
+            PlateletsMin : float option
             AdmissionSource : PRISM.AdmissionSource
             CPR24HourBefore : bool
             Cancer : bool
@@ -366,14 +537,17 @@ module Types =
             | SeizureDisorder
             | SevereCombinedImmuneDeficiency
 
+        type Recovery =
+            | NoRecovery
+            | PostCardiacByPass
+            | PostCariacNonByPass
+            | PostNonCardiacProcedure
+
     type PIM =
         {
             Urgency: PIM.AdmissionUrgency
-            Recovery: bool
+            Recovery: PIM.Recovery
             RiskDiagnosis: PIM.RiskDiagnosis list
-            CardiacByPass: bool
-            CardiacNonByPass: bool
-            NonCardiacProcedure: bool
             Ventilated: bool
             AdmissionPupils: PIM.PupilResponse
             PaO2: float option
@@ -413,20 +587,27 @@ module Types =
             AdmissionType : AdmissionType
             AdmissionIndication : string
             ReferingSpecialism : string
-            PrimaryDiagnosis : string list
-            SecondaryDiagnosis : string list
-            Diagnoses : string list
+            PrimaryDiagnosis : Diagnose list
+            SecondaryDiagnosis : Diagnose list
+            Diagnoses : Diagnose list
             AdmissionWeight : float option
             AdmissionLength : int option
             PIM : PIM
-            PRISM : PRISM
+            PRISM24 : PRISM option
+            PRISM12 : PRISM option
+            PRISM4 : PRISM option
         }
     and AdmissionType =
         | Medical
         | Surgery
         | DOA
         | UnknownAdmissionType
-
+    and Diagnose =
+        {
+            Id: string
+            Group : string
+            Name : string
+        }
 
 
     type ParsingError =
@@ -2869,6 +3050,13 @@ module Patient =
         
         open PIM
 
+
+        let pupilsToString = function
+            | PIM.FixedDilated  -> "1"
+            | PIM.NormalPupils  -> "0"
+            | PIM.UnknownPupils -> ""
+
+
         // PIM2
         //High Risk Diagnoses include:
         //Cardiac Arrest
@@ -2970,14 +3158,17 @@ module Patient =
                 |> Option.defaultValue 0.
                 |> kiloPascalToMmHg
 
+            let recovScore = function
+                | PIM.NoRecovery        -> 0.
+                | PIM.PostCardiacByPass -> 0.7507
+                | _                     -> -1.0244
+
             let score =
                 [
                     "elective",
                     if pim.Urgency = Elective then -0.9282 else 0.
                     "recovery",
-                    if pim.Recovery then -1.0244 else 0.
-                    "bypass",
-                    if pim.CardiacByPass then 0.7507 else 0.
+                    pim.Recovery |> recovScore
 
                     "risk diagnosis",
                     [
@@ -3072,16 +3263,19 @@ module Patient =
                 pim.SystolicBloodPressure
                 |> Option.defaultValue 120.
 
+            let recovScore = function
+                | PIM.NoRecovery              -> 0.
+                | PIM.PostCardiacByPass       -> -1.2246
+                | PIM.PostCariacNonByPass     -> -0.8762
+                | PIM.PostNonCardiacProcedure -> -1.5164
+
             let score =
                 [
                     "urgency"
                     , if pim.Urgency = Elective then -0.5378 else 0.
 
-                    if pim.Recovery then
-                        match pim.CardiacByPass, pim.CardiacNonByPass with
-                        | true, _     -> "recovery bypass",      -1.2246
-                        | false, true -> "recovery non-bypass",  -0.8762
-                        | _ ->           "recovery non-cardiac", -1.5164
+                    "recovery"
+                    , pim.Recovery |> recovScore
 
                     "risk diagnosis",
                     [
@@ -3138,6 +3332,41 @@ module Patient =
         open System
 
         open PRISM
+
+        type Value =
+            | NoValue
+            | OneValue of float
+            | TwoValues of float * float
+
+        type Input =
+            {
+                Age : DateTime option
+                SystolicBloodPressure : Value
+                Temperature : Value
+                MentalStatus : Value
+                HeartRate : Value
+                PupilsFixed : Value
+                PH : Value
+                TotalCO2 : Value
+                PCO2 : Value
+                PaO2 : Value
+                Glucose : Value
+                Potassium : Value
+                Creatinine : Value
+                Urea : Value
+                WhiteBloodCount : Value
+                PT : Value
+                PTT : Value
+                Platelets : Value
+                AdmissionSource : PRISM.AdmissionSource
+                CPR24HourBefore : bool
+                Cancer : bool
+                LowRiskPrimary : bool
+                PRISM3Score : int option
+                PRISM3Neuro : int option
+                PRISM4Mortality : float option
+            }
+
 
         type Mapping =
             {
@@ -3228,6 +3457,38 @@ module Patient =
                 // wbc
                 { Item = Platelets;     AgeType = AnyAge;        LowPoints = 2; MidPoints = 4; HighPoints = 5; LowRange = 50.;   MidRangeLow = Some 100.; MidRangeHigh = None;      HighRange = 200. }
             ]
+
+        let prism = 
+            {
+                Age = None
+                SystolicBloodPressureMin = None
+                TemperatureMin = None
+                TemperatureMax = None
+                MentalStatus = None
+                HeartRateMax = None
+                PupilsFixed = None
+                PHMin = None
+                PHMax = None
+                BicarbonateMin = None
+                BicarbonateMax = None
+                PCO2Max = None
+                PaO2Min = None
+                GlucoseMax = None
+                PotassiumMax = None
+                CreatinineMax = None
+                UreaMax = None
+                WhiteBloodCountMin = None
+                PTMax = None
+                PTTMax = None
+                PlateletsMin = None
+                AdmissionSource = PRISM.AdmissionSource.UnknownAdmissionSource
+                CPR24HourBefore = false
+                Cancer = false
+                LowRiskPrimary = false
+                PRISM3Score = None
+                PRISM3Neuro = None
+                PRISM4Mortality = None
+            }
 
         let input =
             {
@@ -3504,7 +3765,7 @@ module Patient =
                 |> failwith
 
 
-        let calcScore date (input : PRISM) =
+        let calcScore date (input : Input) =
             let calc = input.Age |> mapPRISM3Age date |> calcItem
             [
                 "SBP", input.SystolicBloodPressure |> calc BloodPressure
@@ -3567,6 +3828,50 @@ module Patient =
                     None
 
 
+        let mapPRISMtoInput (prism: PRISM) : Input =
+            let mapOptToOneValue o =
+                match o with
+                | Some v -> OneValue v
+                | None   -> NoValue
+
+            let mapOptToTwoValue o1 o2 =
+                match o1, o2 with
+                | Some v1, Some v2 -> TwoValues (v1, v2)
+                | _                -> NoValue
+
+            {
+                input with
+                    Age = prism.Age
+                    SystolicBloodPressure = prism.SystolicBloodPressureMin |> mapOptToOneValue
+                    Temperature = mapOptToTwoValue prism.TemperatureMin prism.TemperatureMax
+                    MentalStatus = prism.MentalStatus |> Option.map float |> mapOptToOneValue
+                    HeartRate = prism.HeartRateMax |> Option.map float |> mapOptToOneValue
+                    PupilsFixed = prism.PupilsFixed |> Option.map float |> mapOptToOneValue
+                    PH = mapOptToTwoValue prism.PHMin prism.PHMax
+                    TotalCO2 = mapOptToTwoValue prism.BicarbonateMin prism.BicarbonateMax
+                    PCO2 = prism.PCO2Max |> mapOptToOneValue
+                    PaO2 = prism.PaO2Min |> mapOptToOneValue
+                    Glucose = prism.GlucoseMax |> mapOptToOneValue
+                    Potassium = prism.PotassiumMax |> mapOptToOneValue
+                    Creatinine = prism.CreatinineMax |> mapOptToOneValue
+                    Urea = prism.UreaMax |> mapOptToOneValue
+                    WhiteBloodCount = prism.WhiteBloodCountMin |> mapOptToOneValue
+                    PT = prism.PTMax |> mapOptToOneValue
+                    PTT = prism.PTTMax |> mapOptToOneValue
+                    Platelets = prism.PlateletsMin |> mapOptToOneValue
+                    AdmissionSource = prism.AdmissionSource
+                    CPR24HourBefore = prism.CPR24HourBefore
+                    Cancer = prism.Cancer
+                    LowRiskPrimary = prism.LowRiskPrimary
+            }
+
+        let mapInputToPRISM (prism: PRISM) (input : Input) : PRISM =
+            { prism with
+                PRISM3Neuro = input.PRISM3Neuro
+                PRISM3Score = input.PRISM3Score
+                PRISM4Mortality = input.PRISM4Mortality
+            }
+
         let calculate date input =
             match input.Age with
             | None -> input
@@ -3605,60 +3910,125 @@ module Patient =
             PICUAdmissions = []
         }
 
+    let createPIM
+        urgency
+        recovery
+        bypass
+        cardiac
+        riskDiagnosis
+        ventilated
+        pupils
+        paO2
+        fiO2
+        be
+        sbp
+        =
+        let recovMapping =
+            match recovery, bypass, cardiac with
+            | false, false, true  
+            | false, false, false -> PIM.NoRecovery
+            | false, true,  false // asume that post cardiac bypass is always recovery
+            | false, true,  true  // asume that post cardiac bypass is always recovery
+            | true,  true,  true  // asume that post cardiac bypass has precedence above cardiac
+            | true,  true,  false -> PIM.PostCardiacByPass
+            | true,  false, true  -> PIM.PostCariacNonByPass
+            | true,  false, false -> PIM.PostNonCardiacProcedure
+                   
+        {
+            Urgency = urgency
+            Recovery = recovMapping
+            RiskDiagnosis = riskDiagnosis
+            Ventilated = ventilated
+            AdmissionPupils = pupils
+            PaO2 = paO2
+            FiO2 = fiO2
+            BaseExcess = be
+            SystolicBloodPressure = sbp
+            PIM2Score = None
+            PIM2Mortality = None
+            PIM3Score = None
+            PIM3Mortality = None
+        }
+        |> PIM.calculatePIM2
+        |> PIM.calculatePIM3
+
+
+    let createPRISM
+        sbpMin
+        tempMin
+        tempMax
+        emv
+        hrMax
+        pupils
+        phMin
+        phMax
+        bicMin
+        bicMax
+        pCO2Max
+        paO2Min
+        glucMax
+        potassiumMax
+        creatMax
+        ureaMax
+        wbcMin
+        ptMax
+        pttMax
+        platMin
+        admSource
+        cpr
+        cancer
+        lowRisk =
+        {
+            Age = None
+            SystolicBloodPressureMin = sbpMin
+            TemperatureMin = tempMin
+            TemperatureMax = tempMax
+            MentalStatus = emv
+            HeartRateMax = hrMax
+            PupilsFixed = pupils
+            PHMin = phMin
+            PHMax = phMax
+            BicarbonateMin = bicMin
+            BicarbonateMax = bicMax
+            PCO2Max = pCO2Max
+            PaO2Min = paO2Min
+            GlucoseMax = glucMax
+            PotassiumMax = potassiumMax
+            CreatinineMax = creatMax
+            UreaMax = ureaMax
+            WhiteBloodCountMin = wbcMin
+            PTMax = ptMax
+            PTTMax = pttMax
+            PlateletsMin = platMin
+            AdmissionSource = admSource
+            CPR24HourBefore = cpr
+            Cancer = cancer
+            LowRiskPrimary = lowRisk
+            PRISM3Score = None
+            PRISM3Neuro = None
+            PRISM4Mortality = None
+        }
+        |> Some
+
+
     let createPICUAdmission
         hospitalNumber
         clickId
         admissionDate
         dischargeDate
         dischargeReason
-        urgency
         admissionType
-        recovery
         admissionIndication
         referingSpecialism
+        primaryDiagn
+        secondaryDiagn
         admissionWeight
         admissionLength
-        tempMin12
-        tempMax12
-        riskDiagnosis
-        paO2
-        fiO2
-        be
-        systolicBP
-        ventilated
-        pupils
-        cardiacByPass
-        lowSystolicBP
-        admissionSource
-        mentalStatus
-        fixedPupils
-        cpr
-        cancer
-        lowRiskDiagnosis
-        heartRate
-        pHLow
-        pHHigh
-        bicarbonateLow
-        bicarbonateHigh
-        pCO2
-        glucose
-        potassium
-        creatinin
-        urea
-        whiteBloodCount
-        PT
-        aPTT
-        platelets
+        pim
+        prism24
+        prism12
+        prism4
         =
-        let mapOptToOneValue o =
-            match o with
-            | Some v -> PRISM.OneValue v
-            | None   -> PRISM.NoValue
-
-        let mapOptToTwoValue o1 o2 =
-            match o1, o2 with
-            | Some v1, Some v2 -> PRISM.TwoValues (v1, v2)
-            | _                -> PRISM.NoValue
         {
             ClickId = clickId
             HospitalNumber = hospitalNumber
@@ -3668,64 +4038,15 @@ module Patient =
             AdmissionType = admissionType
             AdmissionIndication = admissionIndication
             ReferingSpecialism = referingSpecialism
-            PrimaryDiagnosis = []
-            SecondaryDiagnosis = []
+            PrimaryDiagnosis = primaryDiagn
+            SecondaryDiagnosis = secondaryDiagn
             Diagnoses = []
             AdmissionWeight = admissionWeight
             AdmissionLength = admissionLength
-            PIM =
-                {
-                    Urgency = urgency
-                    Recovery = recovery
-                    RiskDiagnosis = riskDiagnosis
-                    CardiacByPass = cardiacByPass
-                    CardiacNonByPass = false //cardiacNonByPass
-                    NonCardiacProcedure = false //nonCardiacProcedure
-                    Ventilated = ventilated
-                    AdmissionPupils = pupils
-                    PaO2 = paO2
-                    FiO2 = fiO2
-                    BaseExcess = be
-                    SystolicBloodPressure = systolicBP
-                    PIM2Score = None
-                    PIM2Mortality = None
-                    PIM3Score = None
-                    PIM3Mortality = None
-                }
-                |> PIM.calculatePIM2
-                |> PIM.calculatePIM3
-            PRISM =
-                {
-                    Age = None
-                    SystolicBloodPressure = lowSystolicBP |> mapOptToOneValue
-                    Temperature = mapOptToTwoValue tempMin12 tempMax12
-                    MentalStatus =
-                        match mentalStatus with
-                        | None   -> Some 15.
-                        | Some _ -> mentalStatus
-                        |> mapOptToOneValue
-                    HeartRate = heartRate |> mapOptToOneValue
-                    PupilsFixed = fixedPupils |> mapOptToOneValue
-                    PH = mapOptToTwoValue pHLow pHHigh    
-                    TotalCO2 = mapOptToTwoValue bicarbonateLow bicarbonateHigh
-                    PCO2 = pCO2 |> mapOptToOneValue
-                    PaO2 = paO2 |> mapOptToOneValue
-                    Glucose = glucose |> mapOptToOneValue
-                    Potassium = potassium |> mapOptToOneValue
-                    Creatinine = creatinin |> mapOptToOneValue
-                    Urea = urea |> mapOptToOneValue
-                    WhiteBloodCount = whiteBloodCount |> mapOptToOneValue
-                    PT = PT |> mapOptToOneValue
-                    PTT = aPTT |> mapOptToOneValue
-                    Platelets = platelets |> mapOptToOneValue
-                    AdmissionSource = admissionSource
-                    CPR24HourBefore = cpr
-                    Cancer = cancer
-                    LowRiskPrimary = lowRiskDiagnosis
-                    PRISM3Score = None
-                    PRISM3Neuro = None
-                    PRISM4Mortality = None
-                }
+            PIM = pim
+            PRISM24 = prism24
+            PRISM12 = prism12
+            PRISM4 = prism4
         }
 
     let picuAdmissionToString (a : PICUAdmission) =
@@ -3822,7 +4143,7 @@ module Parsing =
 
         let parseInt s =
             match Int32.TryParse(s) with
-            | true, x  -> Some x
+            | true,  x -> Some x
             | false, _ -> None
 
 
@@ -3931,6 +4252,19 @@ module Parsing =
             |> List.exists ((=) s)
 
 
+        let parseDiagnose n id =
+            id
+            |> MRDM.Codes.find n
+            |> function
+            | None -> []
+            | Some s ->
+                s
+                |> String.replace "(" ""
+                |> String.replace ")" "|"
+                |> String.split "|"
+                |> function
+                | [g;d] -> [ { Id = id; Group = g |> String.trim |> String.toLower; Name = d |> String.trim |> String.toLower} ]
+                | _     -> []
 
     let parsePatient (hospData : MRDMHospital.Row[]) (d : MRDMPatient.Row) =
         let getHospNum (data : MRDMHospital.Row[]) =
@@ -3983,7 +4317,7 @@ module Parsing =
                 <*> parseDateOpt d.``adm-hosp-admdate``
                 <*> parseDateOpt d.``adm-hosp-disdate`` 
             )
-            |> Result.foldOk (fun _ msgs -> msgs)
+            |> Result.foldOk 
             |> function
             | Result.Ok (adms, msgs2) ->
                 msgs1 |> Array.append msgs2 |> Result.okMsg ({ p with HospitalAdmissions = adms |> Array.toList })
@@ -3993,7 +4327,7 @@ module Parsing =
 
 
     let addPICUAdmissions (admissions : Result<PICUAdmission[] * string[], _>)
-                          (diagnoses : {| hn : string; ad: DateTime option; dd : DateTime option; pd: string; sd : string; dn : string |}[]) =
+                          (diagnoses : {| hn : string; ad: DateTime option; dd : DateTime option; dn : string |}[]) =
         let inPeriod dt1 dt2 dt3 dt4 =
             match dt1, dt2, dt3, dt4 with
             | Some d1, Some d2, Some d3, Some d4 -> d1 <= d3 && d2 >= d4
@@ -4001,9 +4335,26 @@ module Parsing =
             | Some d1, None   , Some d3, _  -> d1 <= d3
             | _ -> false
 
+        let calcPRISM bdt adt prism =
+            match prism with
+            | None -> None
+            | Some prism ->
+                {
+                    prism with
+                        Age = bdt
+                }
+                |> fun prism ->
+                    match adt with
+                    | Some dt ->
+                        prism
+                        |> PRISM.mapPRISMtoInput
+                        |> PRISM.calculate dt
+                        |> PRISM.mapInputToPRISM prism
+                        |> Some
+                    | None    -> prism |> Some
+
         let fErr msgs = msgs |> Result.Error
         let fOk ((p : Patient), msgs1) =
-
             match admissions with
             | Result.Ok (xs , msgs2) ->
                 let p =
@@ -4028,33 +4379,22 @@ module Parsing =
                                                         d.dd = pa.DischargeDate
                                                     )
                                                 { pa with
-                                                    PRISM =
-                                                        {
-                                                            pa.PRISM with
-                                                                Age = p.BirthDate
-                                                        }
-                                                        |> fun prism ->
-                                                            match pa.AdmissionDate with
-                                                            | Some dt -> prism |> PRISM.calculate dt
-                                                            | None    -> prism
-                                                    PrimaryDiagnosis =
-                                                        diagnoses
-                                                        |> Array.map (fun d -> d.pd)
-                                                        |> Array.distinct
-                                                        |> Array.filter (isNullOrWhiteSpace >> not)
-                                                        |> Array.toList
-                                                    SecondaryDiagnosis =
-                                                        diagnoses
-                                                        |> Array.map (fun d -> d.pd)
-                                                        |> Array.distinct
-                                                        |> Array.filter (isNullOrWhiteSpace >> not)
-                                                        |> Array.toList
+                                                    PRISM24 =
+                                                        pa.PRISM24
+                                                        |> calcPRISM p.BirthDate pa.AdmissionDate
+                                                    PRISM12 =
+                                                        pa.PRISM12
+                                                        |> calcPRISM p.BirthDate pa.AdmissionDate
+                                                    PRISM4 =
+                                                        pa.PRISM4
+                                                        |> calcPRISM p.BirthDate pa.AdmissionDate
                                                     Diagnoses =
                                                         diagnoses
-                                                        |> Array.map (fun d -> d.pd)
-                                                        |> Array.distinct
-                                                        |> Array.filter (isNullOrWhiteSpace >> not)
                                                         |> Array.toList
+                                                        |> List.collect (fun d ->
+                                                            d.dn
+                                                            |> Parsers.parseDiagnose "bijkomende-diagnose" 
+                                                        )
                                                 }
                                             )
                                             |> Array.toList
@@ -4072,27 +4412,116 @@ module Parsing =
             match pv with
             | PRISM.OneValue p1 ->
                 match oc1 with
-                | Some c1 ->
+                | Some c1 when c1 <> 0. ->
                     if c1 = p1 then "", pv
                     else
                         sprintf "%s click value: %A <> MRDM value: %A" n oc1 p1, pv
-                | None -> "", pv
+                | _ -> "", pv
             | PRISM.TwoValues (p1, p2) ->
                 match oc1, oc2 with
-                | Some c1, Some c2 ->
+                | Some c1, Some c2 when c1 <> 0. && c2 <> 0. ->
                     if c1 = p1 && c2 = p2 then "", pv
                     else
                         sprintf "%s click values: %A, %A <> MRDM value: %A" n oc1 oc2 pv, pv
                 | _, _ -> "", pv
             | _ ->
                 match oc1, oc2 with
-                | Some c1, None ->
+                | Some c1, None  ->
                     let pv = PRISM.OneValue c1
-                    sprintf "%s click value: %A, no MRDM value" n oc1, pv
+                    sprintf "", pv
                 | Some c1, Some c2 ->
                     let pv = PRISM.TwoValues (c1, c2)
-                    sprintf "%s click values: %A and %A, no MRDM value" n oc1 oc2, pv
+                    sprintf "", pv
                 | _ -> "", pv
+
+        let cmpPRISM (prism: PRISM option) (d : Click.PIMPRISMHist.Row) =
+            match prism with
+            | Some prism -> prism
+            | None       -> PRISM.prism
+            |> fun prism ->
+                let input = prism |> PRISM.mapPRISMtoInput
+                [
+                    let oc1 =
+                        d.sbp_min
+                        |> Parsers.parseFloat
+                        |> Option.map ((*) 7.5)
+                    input.SystolicBloodPressure |> cmpValue "bloodpressure" oc1 None
+
+                    let oc1 = d.T_min |> Parsers.parseFloat
+                    let oc2 = d.T_max |> Parsers.parseFloat
+                    input.Temperature |> cmpValue "temperature" oc1 oc2
+
+                    let oc1 = d.emv |> Parsers.parseFloat
+                    input.MentalStatus |> cmpValue "emv score" oc1 None
+
+                    let oc1 = d.hr_max |> Parsers.parseFloat
+                    input.HeartRate |> cmpValue "heart rate" oc1 None
+
+                    let oc1 = d.pupreaction3 |> Parsers.parseFloat
+                    input.PupilsFixed |> cmpValue "number of pupils" oc1 None
+
+                    let oc1 = d.pH_min |> Parsers.parseFloat
+                    let oc2 = d.pH_max|> Parsers.parseFloat
+                    input.PH |> cmpValue "ph" oc1 oc2
+
+                    let oc1 = d.bicarbonate_min |> Parsers.parseFloat
+                    let oc2 = d.bicarbonate_max |> Parsers.parseFloat
+                    input.TotalCO2 |> cmpValue "bicarbonate" oc1 oc2
+
+                    let oc1 = d.paco2_max |> Parsers.parseFloat
+                    input.PCO2 |> cmpValue "pCO2" oc1 None
+
+                    let oc1 = d.pao2_min |> Parsers.parseFloat
+                    input.PaO2 |> cmpValue "paO2" oc1 None
+
+                    let oc1 = d.glucose_max |> Parsers.parseFloat
+                    input.Glucose |> cmpValue "glucose" oc1 None
+
+                    let oc1 = d.kalium_max |> Parsers.parseFloat
+                    input.Potassium |> cmpValue "potassium" oc1 None
+
+                    let oc1 = d.creatinine_max |> Parsers.parseFloat
+                    input.Creatinine |> cmpValue "creatinine" oc1 None
+
+                    let oc1 = d.ureum_max |> Parsers.parseFloat
+                    input.Urea |> cmpValue "urea" oc1 None
+
+                    let oc1 = d.leuco_min |> Parsers.parseFloat
+                    input.WhiteBloodCount |> cmpValue "white blood cells" oc1 None
+
+                    let oc1 = d.PTT_max |> Parsers.parseFloat
+                    input.PT |> cmpValue "PT" oc1 None
+
+                    let oc1 = d.PTT_max |> Parsers.parseFloat
+                    input.PTT |> cmpValue "aPTT" oc1 None
+
+                    let oc1 = d.thrombo_min |> Parsers.parseFloat
+                    input.Platelets |> cmpValue "platelets" oc1 None
+                ]
+                |> List.fold (fun (i, (input : PRISM.Input), msgs) (msg, v) ->
+                    match i with
+                    | _ when i = 0  -> i + 1, {  input with SystolicBloodPressure = v }, (msg::msgs)
+                    | _ when i = 1  -> i + 1, {  input with Temperature = v }, (msg::msgs)
+                    | _ when i = 2  -> i + 1, {  input with MentalStatus = v }, (msg::msgs)
+                    | _ when i = 3  -> i + 1, {  input with HeartRate = v }, (msg::msgs)
+                    | _ when i = 4  -> i + 1, {  input with PupilsFixed = v }, (msg::msgs)
+                    | _ when i = 5  -> i + 1, {  input with PH = v }, (msg::msgs)
+                    | _ when i = 6  -> i + 1, {  input with TotalCO2 = v }, (msg::msgs)
+                    | _ when i = 7  -> i + 1, {  input with PCO2 = v }, (msg::msgs)
+                    | _ when i = 8  -> i + 1, {  input with PaO2 = v }, (msg::msgs)
+                    | _ when i = 9  -> i + 1, {  input with Glucose = v }, (msg::msgs)
+                    | _ when i = 10 -> i + 1, {  input with Potassium = v }, (msg::msgs)
+                    | _ when i = 11 -> i + 1, {  input with Creatinine = v }, (msg::msgs)
+                    | _ when i = 12 -> i + 1, {  input with Urea = v }, (msg::msgs)
+                    | _ when i = 13 -> i + 1, {  input with WhiteBloodCount = v }, (msg::msgs)
+                    | _ when i = 14 -> i + 1, {  input with PT = v }, (msg::msgs)
+                    | _ when i = 15 -> i + 1, {  input with PTT = v }, (msg::msgs)
+                    | _ when i = 16 -> i + 1, {  input with Platelets = v }, (msg::msgs)
+                    | _ -> i, input, msgs
+                ) (0, input, [])
+                |> fun (_, input, msgs) ->
+                    input |> PRISM.mapInputToPRISM prism |> Some ,
+                    msgs
 
         patResult
         |> function
@@ -4105,90 +4534,13 @@ module Parsing =
                     match clickData |> Array.tryFind (fun d -> d.adm_ic_id = adm.ClickId) with
                     | None   ->  msgs, adms
                     | Some d ->
-                        [
-                            let oc1 =
-                                d.sbp_min
-                                |> Parsers.parseFloat
-                                |> Option.map ((*) 7.5)
-                            adm.PRISM.SystolicBloodPressure |> cmpValue "bloodpressure" oc1 None
-
-                            let oc1 = d.T_min |> Parsers.parseFloat
-                            let oc2 = d.T_max |> Parsers.parseFloat
-                            adm.PRISM.Temperature |> cmpValue "temperature" oc1 oc2
-
-                            let oc1 = d.emv |> Parsers.parseFloat
-                            adm.PRISM.MentalStatus |> cmpValue "emv score" oc1 None
-
-                            let oc1 = d.hr_max |> Parsers.parseFloat
-                            adm.PRISM.HeartRate |> cmpValue "heart rate" oc1 None
-
-                            let oc1 = d.pupreaction3 |> Parsers.parseFloat
-                            adm.PRISM.PupilsFixed |> cmpValue "number of pupils" oc1 None
-
-                            let oc1 = d.pH_min |> Parsers.parseFloat
-                            let oc2 = d.pH_max|> Parsers.parseFloat
-                            adm.PRISM.PH |> cmpValue "ph" oc1 oc2
-
-                            let oc1 = d.bicarbonate_min |> Parsers.parseFloat
-                            let oc2 = d.bicarbonate_max |> Parsers.parseFloat
-                            adm.PRISM.TotalCO2 |> cmpValue "bicarbonate" oc1 oc2
-
-                            let oc1 = d.paco2_max |> Parsers.parseFloat
-                            adm.PRISM.PCO2 |> cmpValue "pCO2" oc1 None
-
-                            let oc1 = d.pao2_min |> Parsers.parseFloat
-                            adm.PRISM.PaO2 |> cmpValue "paO2" oc1 None
-
-                            let oc1 = d.glucose_max |> Parsers.parseFloat
-                            adm.PRISM.Glucose |> cmpValue "glucose" oc1 None
-
-                            let oc1 = d.kalium_max |> Parsers.parseFloat
-                            adm.PRISM.Potassium |> cmpValue "potassium" oc1 None
-
-                            let oc1 = d.creatinine_max |> Parsers.parseFloat
-                            adm.PRISM.Creatinine |> cmpValue "creatinine" oc1 None
-
-                            let oc1 = d.ureum_max |> Parsers.parseFloat
-                            adm.PRISM.Urea |> cmpValue "urea" oc1 None
-
-                            let oc1 = d.leuco_min |> Parsers.parseFloat
-                            adm.PRISM.WhiteBloodCount |> cmpValue "white blood cells" oc1 None
-
-                            let oc1 = d.PTT_max |> Parsers.parseFloat
-                            adm.PRISM.PT |> cmpValue "PT" oc1 None
-
-                            let oc1 = d.PTT_max |> Parsers.parseFloat
-                            adm.PRISM.PTT |> cmpValue "aPTT" oc1 None
-
-                            let oc1 = d.thrombo_min |> Parsers.parseFloat
-                            adm.PRISM.Platelets |> cmpValue "platelets" oc1 None
-                        ]
-                        |> List.fold (fun (i, adm, msgs) (msg, v) ->
-                            match i with
-                            | _ when i = 0  -> i + 1, { adm with PRISM = {  adm.PRISM with SystolicBloodPressure = v } }, (msg::msgs)
-                            | _ when i = 1  -> i + 1, { adm with PRISM = {  adm.PRISM with Temperature = v } }, (msg::msgs)
-                            | _ when i = 2  -> i + 1, { adm with PRISM = {  adm.PRISM with MentalStatus = v } }, (msg::msgs)
-                            | _ when i = 3  -> i + 1, { adm with PRISM = {  adm.PRISM with HeartRate = v } }, (msg::msgs)
-                            | _ when i = 4  -> i + 1, { adm with PRISM = {  adm.PRISM with PupilsFixed = v } }, (msg::msgs)
-                            | _ when i = 5  -> i + 1, { adm with PRISM = {  adm.PRISM with PH = v } }, (msg::msgs)
-                            | _ when i = 6  -> i + 1, { adm with PRISM = {  adm.PRISM with TotalCO2 = v } }, (msg::msgs)
-                            | _ when i = 7  -> i + 1, { adm with PRISM = {  adm.PRISM with PCO2 = v } }, (msg::msgs)
-                            | _ when i = 8  -> i + 1, { adm with PRISM = {  adm.PRISM with PaO2 = v } }, (msg::msgs)
-                            | _ when i = 9  -> i + 1, { adm with PRISM = {  adm.PRISM with Glucose = v } }, (msg::msgs)
-                            | _ when i = 10 -> i + 1, { adm with PRISM = {  adm.PRISM with Potassium = v } }, (msg::msgs)
-                            | _ when i = 11 -> i + 1, { adm with PRISM = {  adm.PRISM with Creatinine = v } }, (msg::msgs)
-                            | _ when i = 12 -> i + 1, { adm with PRISM = {  adm.PRISM with Urea = v } }, (msg::msgs)
-                            | _ when i = 13 -> i + 1, { adm with PRISM = {  adm.PRISM with WhiteBloodCount = v } }, (msg::msgs)
-                            | _ when i = 14 -> i + 1, { adm with PRISM = {  adm.PRISM with PT = v } }, (msg::msgs)
-                            | _ when i = 15 -> i + 1, { adm with PRISM = {  adm.PRISM with PTT = v } }, (msg::msgs)
-                            | _ when i = 16 -> i + 1, { adm with PRISM = {  adm.PRISM with Platelets = v } }, (msg::msgs)
-                            | _ -> i, adm, msgs
-                        ) (0, adm, [])
-                        |> function
-                        | (_, adm, vmsgs) ->
+                        d
+                        |> cmpPRISM adm.PRISM24
+                        |> fun (prism, vmsgs) ->
                             vmsgs
                             |> List.filter (isNullOrWhiteSpace >> not)
-                            |> List.append msgs, adm::adms
+                            |> List.map (sprintf "%s: %s" pat.HospitalNumber)
+                            |> List.append msgs, { adm with PRISM24 = prism }::adms
                 ) ([], [])
 
             let pat =
@@ -4213,10 +4565,11 @@ module Parsing =
 
     let filterDuplicateOrMore (results : Result<Patient * string[], string[]> array) =
         results
-        |> Result.foldOk (fun p msgs -> msgs |> Array.map (fun msg -> sprintf "%s: %s" p.HospitalNumber msg))
+        |> Result.foldOk 
         |> function
-        | Result.Error msgs -> msgs |> Result.error
+        | Result.Error msgs       -> msgs |> Result.error
         | Result.Ok (pats, msgs1) ->
+            printfn "start detecting duplicates"
             // Detect records with the same hospital number
             let pats, msgs2 =
                 let distPats =
@@ -4255,6 +4608,69 @@ module Parsing =
         let mapPupils  = Parsers.mapPupils >> Result.ok
         let mapAdmissionSource = Parsers.mapAdmissionSource >> Result.ok
         let mapLowRiskPRISM = Parsers.mapLowRiskPRISM >> Result.ok
+        let getDiagn n s  =
+            Parsers.parseDiagnose n s
+            |> Result.ok
+
+        let prism (d: MRDM.MRDMPicu.Row) =
+            Patient.createPRISM
+            <!> parseFloat d.``sbp-0``
+            <*> parseFloat d.``t-min12``
+            <*> parseFloat d.``t-max12``
+            <*> parseInt d.``adm-emv``
+            <*> parseInt d.``hr-max12``
+            <*> parseInt d.admpupils
+            <*> parseFloat d.``ph-min12``
+            <*> parseFloat d.``ph-max12``
+            <*> parseFloat d.``bicarbonate-min12``
+            <*> parseFloat d.``bicarbonate-max12``
+            <*> parseFloat d.``paco2-max12``
+            <*> parseFloat d.``pao2-0``
+            <*> parseFloat d.``glucose-max12``
+            <*> parseFloat d.``k-max12``
+            <*> parseFloat d.``creatinine-max12``
+            <*> parseFloat d.``ureum-max12``
+            <*> parseFloat d.``leuco-min12``
+            <*> parseFloat d.``pt-max12``
+            <*> parseFloat d.``ptt-max12``
+            <*> parseFloat d.``thrombo-min12``
+            <*> mapAdmissionSource d.``adm-sourceunitid``
+            <*> parseBool d.contrean12
+            <*> parseBool d.cancer
+            <*> mapLowRiskPRISM d.``risicodiag-hoofd``
+
+        let pim (d : MRDM.MRDMPicu.Row) =
+            let cardiac g =
+                let d1 =
+                    d.diagnose1
+                    |> Parsers.parseDiagnose "diagnose1"
+                    |> List.exists (fun d -> d.Group = g)
+                let d2 =
+                    d.diagnose2
+                    |> Parsers.parseDiagnose "diagnose2"
+                    |> List.exists (fun d -> d.Group = g)
+                d1 || d2
+
+            Patient.createPIM
+            <!> mapUrgency d.``adm-typeid-urgentie``
+            <*> parseBool d.recovery
+            <*> parseBool d.bypass
+            <*> Result.ok (cardiac "cardiovasculair")
+            <*> (mapRisk d.``risicodiag-hoofd``
+                         d.``leukemie-riskpim``
+                         d.``bmtrecipient-riskpim``
+                         d.``sponthersenbl-riskpim``
+                         d.``cardmyopath-riskpim``
+                         d.``scid-riskpim``
+                         d.``hiv-riskpim``
+                         d.``neurodegen-riskpim``
+                         d.``hypoplast-riskpim``)
+            <*> parseBool d.ventilated
+            <*> mapPupils d.admpupils
+            <*> parseFloat d.``pao2-0``
+            <*> parseFloat d.``fio2-0``
+            <*> parseFloat d.``be-0``
+            <*> parseFloat d.``sbp-0``
 
         picuData
         |> Array.map (fun d ->
@@ -4273,58 +4689,22 @@ module Parsing =
             <*> parseDateOpt d.``adm-ic-admdate``
             <*> parseDateOpt d.``adm-ic-disdate``
             <*> find "adm-disreasonid" d.``adm-disreasonid``
-            <*> mapUrgency d.``adm-typeid-urgentie``
             <*> mapAdmType d.``adm-typeid-soort``
-            <*> parseBool d.recovery
             <*> find "adm-indication" d.``adm-indication``
             <*> find "adm-refspecialism" d.``adm-refspecialism``
+            <*> getDiagn "diagnose1" d.diagnose1
+            <*> getDiagn "diagnose2" d.diagnose2
             <*> parseFloat d.gewicht
             <*> parseInt d.``adm-length``
-            <*> parseFloat d.``t-min12``
-            <*> parseFloat d.``t-max12``
-            <*> (mapRisk d.``risicodiag-hoofd``
-                         d.``leukemie-riskpim``
-                         d.``bmtrecipient-riskpim``
-                         d.``sponthersenbl-riskpim``
-                         d.``cardmyopath-riskpim``
-                         d.``scid-riskpim``
-                         d.``hiv-riskpim``
-                         d.``neurodegen-riskpim``
-                         d.``hypoplast-riskpim``)
-            <*> parseFloat d.``pao2-0``
-            <*> parseFloat d.``fio2-0``
-            <*> parseFloat d.``be-0``
-            <*> parseFloat d.``sbp-0``
-            <*> parseBool d.ventilated
-            <*> mapPupils d.admpupils
-            <*> parseBool d.bypass
-            <*> parseFloat d.``sbp-min12``
-            <*> mapAdmissionSource d.``adm-sourceunitid``
-            <*> parseFloat d.``adm-emv``
-            <*> parseFloat d.admpupils
-            <*> parseBool d.contrean12
-            <*> parseBool d.cancer
-            <*> mapLowRiskPRISM d.``risicodiag-hoofd``
-            <*> parseFloat d.``hr-max12``
-            <*> parseFloat d.``ph-min12``
-            <*> parseFloat d.``ph-max12``
-            <*> parseFloat d.``bicarbonate-min12``
-            <*> parseFloat d.``bicarbonate-max12``
-            <*> parseFloat d.``paco2-max12``
-            <*> parseFloat d.``glucose-max12``
-            <*> parseFloat d.``k-max12``
-            <*> parseFloat d.``creatinine-max12``
-            <*> parseFloat d.``ureum-max12``
-            <*> parseFloat d.``leuco-min12``
-            <*> parseFloat d.``pt-max12``
-            <*> parseFloat d.``ptt-max12``
-            <*> parseFloat d.``thrombo-min12``
+            <*> pim d
+            <*> Result.ok None
+            <*> prism d
+            <*> Result.ok None
         )
-        |> Array.toList
-        |> Result.foldOk (fun _ msgs -> msgs)
+        |> Result.foldOk 
 
 
-    let parseMRDM () : Result<Patient[] * string[], string[]> =
+    let parseMRDM () : Result<(Types.Patient [] * string []), string []> =
         printfn "Start parsing, this can take a while ..."
         let timer = new Stopwatch ()
         timer.Start ()
@@ -4336,7 +4716,7 @@ module Parsing =
             parsePICUAdmissions picuData
         let clickData = Click.pimprismHist.Data |> Seq.toArray
 
-        let picuDiagn =
+        let diagnoses =
             mrdmDiagnos.Data
             |> Seq.toArray
             |> Array.map (fun r ->
@@ -4344,18 +4724,7 @@ module Parsing =
                     hn = r.``ziekenhuis-episode-upn``
                     ad = r.``adm-ic-admdate`` |> Parsers.parseDateOpt
                     dd = r.``adm-ic-disdate`` |> Parsers.parseDateOpt
-                    pd =
-                        r.diagnose1
-                        |> Codes.find "diagnose1"
-                        |> Option.defaultValue ""
-                    sd =
-                        r.diagnose2
-                        |> Codes.find "diagnose2"
-                        |> Option.defaultValue ""
-                    dn =
-                        r.``bijkomende-diagnose``
-                        |> Codes.find "bijkomende-diagnose"
-                        |> Option.defaultValue ""
+                    dn = r.``bijkomende-diagnose``
                 |}
             )
 
@@ -4372,12 +4741,20 @@ module Parsing =
         let addPICU i =
             timer.ElapsedMilliseconds
             |> printfn "%i: %i add picu admission" i
-            addPICUAdmissions picuAdms picuDiagn
+            addPICUAdmissions picuAdms diagnoses
 
         let validClick i =
             timer.ElapsedMilliseconds
             |> printfn "%i: %i validated click data" i
             validateWithClickData clickData
+
+        let filter xs =
+            timer.ElapsedMilliseconds
+            |> printfn "%i: starting filtering duplicates"
+            let xs = xs |> filterDuplicateOrMore
+            timer.ElapsedMilliseconds
+            |> printfn "%i: finished filtering duplicates"
+            xs
 
         mrdmPatient.Data
         |> Seq.toArray
@@ -4385,7 +4762,7 @@ module Parsing =
         |> Array.mapi parseHosp
         |> Array.mapi addPICU
         |> Array.mapi validClick
-        |> filterDuplicateOrMore
+        |> filter
 
 
 
@@ -4505,6 +4882,13 @@ module Statistics =
     let calculate (pats: Patient list) =
         let stats = Statistics ()
 
+        let getPRISMMort (pa : PICUAdmission) =
+            match pa.PRISM4, pa.PRISM12, pa.PRISM24 with
+            | Some prism, _, _
+            | None, Some prism, _
+            | None, None, Some prism -> prism.PRISM4Mortality
+            | _ -> None
+
         let disReasons =
             pats
             |> List.collect (fun p ->
@@ -4609,9 +4993,9 @@ module Statistics =
             |> List.map (fun p -> p.picuAdmission)
             |> List.filter (fun pa ->
                 pa.DischargeDate |>  Option.isSome &&
-                pa.PRISM.PRISM4Mortality |> Option.isSome
+                pa |> getPRISMMort |> Option.isSome
             )
-            |> List.map (fun pa -> pa.PRISM.PRISM4Mortality |> Option.get)
+            |> List.map (fun pa -> pa |> getPRISMMort |> Option.get)
             |> List.filter (Double.IsNaN >> not)
             |> List.sum
 
@@ -4719,10 +5103,10 @@ module Statistics =
                 |> List.map (fun p -> p.picuAdmission)
                 |> List.filter (fun pa ->
                     pa.DischargeDate |>  Option.isSome &&
-                    pa.PRISM.PRISM4Mortality |> Option.isSome
+                    pa |> getPRISMMort |> Option.isSome
                 )
                 |> List.filter (fun pa -> pa.DischargeDate.Value.Year = yr.Value)
-                |> List.map (fun pa -> pa.PRISM.PRISM4Mortality |> Option.get)
+                |> List.map (fun pa -> pa |> getPRISMMort |> Option.get)
                 |> List.filter (Double.IsNaN >> not)
                 |> List.sum
 
@@ -5040,13 +5424,150 @@ module Statistics =
 
 
 
+module Export =
+
+    open Types
+
+    let optDateDiff fSome defVal (dt1 : DateTime option) (dt2 : DateTime option) =
+        match dt1, dt2 with
+        | Some d1, Some d2 -> (d1 - d2).TotalDays |> fSome
+        | _, _             -> defVal
+
+    let export (pats: Result<Patient[] * string[], _>) =
+        let optToString = Option.map string >> Option.defaultValue ""
+        let optDateDiff = optDateDiff string ""
+
+        let headers =
+            [
+                "HospitalNumber"
+                "AdmissionDate"
+                "Age(days)"
+                "RiskDiagnoses"
+                "Urgency"
+                "Recovery"
+                "Ventilated"
+                "AdmissionPupils"
+                "SystolicBP"
+                "BaseExcess"
+                "FiO2"
+                "PaO2"
+                "PIM2Score"
+                "PIM2Mort"
+                "PIM3Score"
+                "PIM3Mort"
+                "AdmissionSource"
+                "Cancer"
+                "CPR24HourBefore"
+                "CreatinineMax"
+                "GlucoseMax"
+                "HeartRateMax"
+                "LowRiskPrimary"
+                "MentalStatus"
+                "PaO2Min"
+                "PCO2Max"
+                "PHMin"
+                "PHMax"
+                "PlateletsMin"
+                "PotassiumMax"
+                "PTMax "
+                "PTTMax"
+                "PupilsFixed"
+                "SystolicBloodPressureMin"
+                "TemperatureMin"
+                "TemperatureMax"
+                "BicarbonateMin"
+                "BicarbonateMax"
+                "UreaMax"
+                "WhiteBloodCountMin"
+                "PRISM3Neuro"
+                "PRISM3Score"
+                "PRISM4Mortality"
+            ]
+            |> List.singleton
+
+        pats
+        |> Result.valueOrDefault (fun _ -> [||])
+        |> Array.toList
+        |> List.collect (fun pat ->
+            pat.HospitalAdmissions
+            |> List.collect (fun ha ->
+                ha.PICUAdmissions
+                |> List.map (fun pa ->
+                    let optPRISM p =
+                        match p with
+                        | None -> []
+                        | Some prism ->
+                            [
+                                prism.AdmissionSource |> string
+                                prism.Cancer |> string
+                                prism.CPR24HourBefore |> string
+                                prism.CreatinineMax |> optToString
+                                prism.GlucoseMax |> optToString
+                                prism.HeartRateMax |> Option.map float |> optToString
+                                prism.LowRiskPrimary |> string
+                                prism.MentalStatus |> Option.map float |> optToString
+                                prism.PaO2Min |> optToString
+                                prism.PCO2Max |> optToString
+                                prism.PHMin |> optToString
+                                prism.PHMax |> optToString
+                                prism.PlateletsMin |> optToString
+                                prism.PotassiumMax |> optToString
+                                prism.PTMax  |> optToString
+                                prism.PTTMax |> optToString
+                                prism.PupilsFixed |> Option.map float |> optToString
+                                prism.SystolicBloodPressureMin |> optToString
+                                prism.TemperatureMin |> optToString
+                                prism.TemperatureMax |> optToString
+                                prism.BicarbonateMin |> optToString
+                                prism.BicarbonateMax |> optToString
+                                prism.UreaMax |> optToString
+                                prism.WhiteBloodCountMin |> optToString
+                                prism.PRISM3Neuro |> Option.map float |> optToString
+                                prism.PRISM3Score |> Option.map float |> optToString
+                                prism.PRISM4Mortality |> optToString
+                            ]
+
+
+                    [
+                        pat.HospitalNumber
+                        pa.AdmissionDate |> Option.map string |> Option.defaultValue ""
+                        optDateDiff pa.AdmissionDate pat.BirthDate
+                        pa.PIM.RiskDiagnosis |> List.map string |> String.concat ", "
+                        pa.PIM.Urgency |> string
+                        pa.PIM.Recovery |> string
+                        pa.PIM.Ventilated |> string
+                        pa.PIM.AdmissionPupils |> Patient.PIM.pupilsToString
+                        pa.PIM.SystolicBloodPressure |> optToString
+                        pa.PIM.BaseExcess |> optToString
+                        pa.PIM.FiO2 |> optToString
+                        pa.PIM.PaO2 |> optToString
+                        pa.PIM.PIM2Score |> optToString
+                        pa.PIM.PIM2Mortality |> optToString
+                        pa.PIM.PIM3Score |> optToString
+                        pa.PIM.PIM3Mortality |> optToString
+                        match pa.PRISM4, pa.PRISM12, pa.PRISM24 with
+                        | Some prism, _, _
+                        | None, Some prism, _ 
+                        | None, None, Some prism -> yield! (prism |> Some |> optPRISM)
+                        | _ -> ()
+                    ]
+                )
+            )
+        )
+        |> List.append headers
+
+
+
 
 let pats = Parsing.parseMRDM ()
+
 
 
 pats
 |> Result.getMessages
 |> Array.length
+//|> Array.take 1000
+//|> Array.iter (printfn "%s")
 
 
 pats
@@ -5116,26 +5637,6 @@ pats
 
 pats
 |> Result.valueOrDefault (fun _ -> [||])
-|> Array.filter (fun p ->
-    p.HospitalAdmissions
-    |> List.filter (fun ha -> ha.AdmissionDate |> Option.isSome)
-    |> List.exists (fun ha ->
-        (ha.AdmissionDate |> Option.get).Year = 2019 &&
-        (ha.PICUAdmissions
-         |> List.exists (fun pa ->
-            pa.PRISM.PRISM4Mortality > Some 0.1
-         ))
-    )
-)
-|> Array.toList
-|> List.take 100
-|> List.iter (fun p ->
-    printfn "%A" p
-)
-
-
-pats
-|> Result.valueOrDefault (fun _ -> [||])
 |> Array.toList
 |> List.collect (fun p ->
     p.HospitalAdmissions
@@ -5150,31 +5651,15 @@ pats
 
 pats
 |> Result.valueOrDefault (fun _ -> [||])
-|> Array.toList
-|> List.collect (fun p ->
-    p.HospitalAdmissions
-    |> List.collect (fun ha ->
-        ha.PICUAdmissions
-    )
-)
-|> List.filter (fun pa ->
-    pa.PRISM.Cancer &&
-    pa.AdmissionDate |> Option.isSome &&
-    pa.DischargeDate |> Option.isSome &&
-    pa.AdmissionDate >= Some (DateTime(2009, 1, 1)) &&
-//    pa.DischargeDate < Some (DateTime(2020, 1, 1)) &&
-    match pa.PRISM.Temperature with
-    | Types.PRISM.TwoValues(t1, t2) -> t1 > 38.0 || t2 > 38.0
-    | _ -> false
-)
-|> List.map (fun pa -> pa.HospitalNumber)
-|> List.distinct
-|> List.length
-
-
-pats
-|> Result.valueOrDefault (fun _ -> [||])
 |> Array.tryFind (fun p ->
     p.HospitalNumber = "3240761"
 )
 
+
+pats
+|> Export.export
+|> List.map (String.concat ";")
+|> String.concat "\n"
+|> File.writeTextToFile "scores.csv"
+
+Environment.CurrentDirectory
