@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net45</TargetFrameworks>
+        <TargetFrameworks>net472</TargetFrameworks>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     </PropertyGroup>
@@ -17,9 +17,14 @@
         <None Include="Scripts\PRISM.fsx" />
         <None Include="Scripts\PIM.fsx" />
         <None Include="Scripts\MRDM.fsx" />
+        <None Include="Scripts\MRDM2.fsx" />
         <None Include="Scripts/Scripts.fsx" />
         <None Include="Scripts/Excel.fsx" />
         <Compile Include="AssemblyInfo.fs" />
+        <Compile Include="NullCheck.fs" />
+        <Compile Include="String.fs" />
+        <Compile Include="File.fs" />
+        <Compile Include="Markdown.fs" />
         <Compile Include="Mapping.fs" />
         <Compile Include="MRDM.fs" />
         <Compile Include="PICE.fs" />

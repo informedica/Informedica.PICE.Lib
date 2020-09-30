@@ -5,3 +5,4 @@ FSharp.Data
 FSharp.Data.TypeProviders
 FSharpComposableQuery
 ExcelProvider
+Markdig
