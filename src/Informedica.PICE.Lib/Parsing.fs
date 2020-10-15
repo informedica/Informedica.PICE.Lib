@@ -49,7 +49,7 @@ module Parsing =
                 |> Some
 
 
-        let mapRiscDiagnosis d leukemia bmt cva card scid hiv neuro hlhs =
+        let mapRiscDiagnosis d cprpre cprin leukemia bmt cva card scid hiv neuro hlhs =
             match d with
             | s when s = "0" -> []
             | s when s = "1" -> [ PIM.Croup ]
@@ -73,6 +73,8 @@ module Parsing =
                 if hiv = "1"      then PIM.HIVPositive
                 if neuro = "1"    then PIM.NeurodegenerativeDisorder
                 if hlhs = "1"     then PIM.HypoplasticLeftHeartSyndrome
+                if cprpre = "1"   then PIM.CardiacArrestPreHospital
+                if cprin = "1"    then PIM.CardiacArrestInHospital
             ]
 
 
@@ -246,6 +248,7 @@ module Parsing =
                                         PICUAdmissions =
                                             xs
                                             |> Array.filter (fun pa ->
+                                                
                                                 pa.HospitalNumber = ha.HospitalNumber &&
                                                 inPeriod ha.AdmissionDate ha.DischargeDate pa.AdmissionDate pa.DischargeDate  
                                             )
@@ -481,8 +484,8 @@ module Parsing =
             else Result.okIfNone [| sprintf "couldn't parse int %s" s |] (Parsers.parseInt s)
         let mapAdmType = Parsers.mapAdmissionType >> Result.ok
         let mapUrgency = Parsers.mapUrgency >> Result.ok
-        let mapRisk d leukemia bmt cva card scid hiv neuro hlhs =
-            Parsers.mapRiscDiagnosis d leukemia bmt cva card scid hiv neuro hlhs
+        let mapRisk d cprpre cprin leukemia bmt cva card scid hiv neuro hlhs =
+            Parsers.mapRiscDiagnosis d cprpre cprin leukemia bmt cva card scid hiv neuro hlhs
             |> Result.ok
         let mapPupils  = Parsers.mapPupils >> Result.ok
         let mapAdmissionSource = Parsers.mapAdmissionSource >> Result.ok
@@ -536,6 +539,8 @@ module Parsing =
             <*> parseBool d.bypass
             <*> Result.ok (cardiac "cardiovasculair")
             <*> (mapRisk d.``risicodiag-hoofd``
+                         d.``cprprehosp-riskpim``
+                         d.``cprprepicu-riskpim``
                          d.``leukemie-riskpim``
                          d.``bmtrecipient-riskpim``
                          d.``sponthersenbl-riskpim``
@@ -575,6 +580,7 @@ module Parsing =
             <*> getDiagn "diagnose2" d.diagnose2
             <*> parseFloat d.gewicht
             <*> parseInt d.``adm-length``
+            <*> parseBool d.contrean12
             <*> pim d
             <*> Result.ok None
             <*> prism d
@@ -582,64 +588,72 @@ module Parsing =
         )
         |> Result.foldOk 
 
+    [<Literal>]
+    let path = __SOURCE_DIRECTORY__ + "/../../mrdm/cache"
 
     let parseMRDM () : Result<(Types.Patient [] * string []), string []> =
-        printfn "Start parsing, this can take a while ..."
-        let timer = new Stopwatch ()
-        timer.Start ()
+        match path |> Cache.getCache<Result<(Types.Patient [] * string []), string []>> with
+        | Some pats -> pats
+        | None ->
+            let pats =
+                printfn "Start parsing, this can take a while ..."
+                let timer = new Stopwatch ()
+                timer.Start ()
 
-        let hospData = mrdmHospital.Data |> Seq.toArray
-        let picuData = mrdmPicu.Data |> Seq.toArray
-        let picuAdms =
-            printfn "parsing picu admissions"
-            parsePICUAdmissions picuData
-        let clickData = Click.pimprismHist.Data |> Seq.toArray
+                let hospData = mrdmHospital.Data |> Seq.toArray
+                let picuData = mrdmPicu.Data |> Seq.toArray
+                let picuAdms =
+                    printfn "parsing picu admissions"
+                    parsePICUAdmissions picuData
+                let clickData = Click.pimprismHist.Data |> Seq.toArray
 
-        let diagnoses =
-            mrdmDiagnos.Data
-            |> Seq.toArray
-            |> Array.map (fun r ->
-                {|
-                    hn = r.``ziekenhuis-episode-upn``
-                    ad = r.``adm-ic-admdate`` |> Parsers.parseDateOpt
-                    dd = r.``adm-ic-disdate`` |> Parsers.parseDateOpt
-                    dn = r.``bijkomende-diagnose``
-                |}
-            )
+                let diagnoses =
+                    mrdmDiagnos.Data
+                    |> Seq.toArray
+                    |> Array.map (fun r ->
+                        {|
+                            hn = r.``ziekenhuis-episode-upn``
+                            ad = r.``adm-ic-admdate`` |> Parsers.parseDateOpt
+                            dd = r.``adm-ic-disdate`` |> Parsers.parseDateOpt
+                            dn = r.``bijkomende-diagnose``
+                        |}
+                    )
 
-        let parsePat i =
-            timer.ElapsedMilliseconds
-            |> printfn "%i: %i parse patient" i
-            parsePatient hospData
+                let parsePat i =
+                    timer.ElapsedMilliseconds
+                    |> printfn "%i: %i parse patient" i
+                    parsePatient hospData
 
-        let parseHosp i =
-            timer.ElapsedMilliseconds
-            |> printfn "%i: %i parse hospital admission" i
-            parseHospAdm hospData
+                let parseHosp i =
+                    timer.ElapsedMilliseconds
+                    |> printfn "%i: %i parse hospital admission" i
+                    parseHospAdm hospData
 
-        let addPICU i =
-            timer.ElapsedMilliseconds
-            |> printfn "%i: %i add picu admission" i
-            addPICUAdmissions picuAdms diagnoses
+                let addPICU i =
+                    timer.ElapsedMilliseconds
+                    |> printfn "%i: %i add picu admission" i
+                    addPICUAdmissions picuAdms diagnoses
 
-        let validClick i =
-            timer.ElapsedMilliseconds
-            |> printfn "%i: %i validated click data" i
-            validateWithClickData clickData
+                let validClick i =
+                    timer.ElapsedMilliseconds
+                    |> printfn "%i: %i validated click data" i
+                    validateWithClickData clickData
 
-        let filter xs =
-            timer.ElapsedMilliseconds
-            |> printfn "%i: starting filtering duplicates"
-            let xs = xs |> filterDuplicateOrMore
-            timer.ElapsedMilliseconds
-            |> printfn "%i: finished filtering duplicates"
-            xs
+                let filter xs =
+                    timer.ElapsedMilliseconds
+                    |> printfn "%i: starting filtering duplicates"
+                    let xs = xs |> filterDuplicateOrMore
+                    timer.ElapsedMilliseconds
+                    |> printfn "%i: finished filtering duplicates"
+                    xs
 
-        mrdmPatient.Data
-        |> Seq.toArray
-        |> Array.mapi parsePat
-        |> Array.mapi parseHosp
-        |> Array.mapi addPICU
-        |> Array.mapi validClick
-        |> filter
+                mrdmPatient.Data
+                |> Seq.toArray
+                |> Array.mapi parsePat
+                |> Array.mapi parseHosp
+                |> Array.mapi addPICU
+                |> Array.mapi validClick
+                |> filter
 
+            pats |> Cache.cache path
+            pats

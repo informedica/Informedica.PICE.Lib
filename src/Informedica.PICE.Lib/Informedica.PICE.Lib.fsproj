@@ -14,20 +14,27 @@
         <Tailcalls>true</Tailcalls>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="Scripts\PRISM.fsx" />
-        <None Include="Scripts\PIM.fsx" />
-        <None Include="Scripts\MRDM.fsx" />
-        <None Include="Scripts\MRDM2.fsx" />
         <None Include="Scripts/Scripts.fsx" />
-        <None Include="Scripts/Excel.fsx" />
         <Compile Include="AssemblyInfo.fs" />
+        <Compile Include="StartUp.fs" />
         <Compile Include="NullCheck.fs" />
         <Compile Include="String.fs" />
+        <Compile Include="StringBuilder.fs" />
         <Compile Include="File.fs" />
+        <Compile Include="Cache.fs" />
         <Compile Include="Markdown.fs" />
-        <Compile Include="Mapping.fs" />
+        <Compile Include="Result.fs" />
+        <Compile Include="Types.fs" />
+        <Compile Include="Utils.fs" />
+        <Compile Include="Click.fs" />
         <Compile Include="MRDM.fs" />
-        <Compile Include="PICE.fs" />
+        <Compile Include="PIM.fs" />
+        <Compile Include="PRISM.fs" />
+        <Compile Include="Patient.fs" />
+        <Compile Include="Validation.fs" />
+        <Compile Include="Parsing.fs" />
+        <Compile Include="Statistics.fs" />
+        <Compile Include="Export.fs" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="System.Data.Linq, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />

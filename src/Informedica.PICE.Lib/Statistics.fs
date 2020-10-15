@@ -1,7 +1,6 @@
 namespace Informedica.PICE.Lib
 
 
-
 module Statistics =
 
     open System

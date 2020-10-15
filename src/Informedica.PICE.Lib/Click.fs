@@ -6,7 +6,7 @@ module Click =
     open FSharp.Interop.Excel
 
     [<Literal>]
-    let path = "../../mrdm/pimprism_hist.xlsx"
+    let path = __SOURCE_DIRECTORY__ + "/../../mrdm/pimprism_hist.xlsx"
 
     type PIMPRISMHist = ExcelFile<path, HasHeaders = true, ForceString = true>
 

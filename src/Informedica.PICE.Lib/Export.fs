@@ -114,7 +114,7 @@ module Export =
                         pa.PIM.Urgency |> string
                         pa.PIM.Recovery |> string
                         pa.PIM.Ventilated |> string
-                        pa.PIM.AdmissionPupils |> Patient.PIM.pupilsToString
+                        pa.PIM.AdmissionPupils |> PIM.pupilsToString
                         pa.PIM.SystolicBloodPressure |> optToString
                         pa.PIM.BaseExcess |> optToString
                         pa.PIM.FiO2 |> optToString

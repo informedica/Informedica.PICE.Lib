@@ -84,7 +84,8 @@ module Types =
             | Asthma
             | BoneMarrowTransplant
             | Bronchiolitis
-            | CardiacArrest
+            | CardiacArrestInHospital
+            | CardiacArrestPreHospital
             | CardiomyopathyOrMyocarditis
             | CerebralHemorrhage
             | Croup
@@ -154,6 +155,7 @@ module Types =
             Diagnoses : Diagnose list
             AdmissionWeight : float option
             AdmissionLength : int option
+            ContinuousReanimation : bool
             PIM : PIM
             PRISM24 : PRISM option
             PRISM12 : PRISM option

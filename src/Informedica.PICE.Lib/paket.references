@@ -4,5 +4,8 @@ Microsoft.NETFramework.ReferenceAssemblies
 FSharp.Data
 FSharp.Data.TypeProviders
 FSharpComposableQuery
+ExcelDataReader
+ExcelDataReader.DataSet
 ExcelProvider
+Newtonsoft.Json
 Markdig
