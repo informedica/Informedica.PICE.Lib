@@ -6,23 +6,47 @@ module Patient =
 
     open System
     open Types
-    
+    open Utils
+    open Informedica.PimPrism.Lib
+    open Informedica.PimPrism.Lib.Types
 
-    let create hn bd ps dd dm =
+    let create id
+               hosptitalNumber
+               lastName
+               firstName
+               birthDate
+               gender
+               birthWeight
+               gestationAge
+               vitalStatus
+               dateOfDeath
+               deathMode
+               locationOfDeath =
         {
-            HospitalNumber = hn
-            BirthDate = bd
-            PatientState = ps
-            DateOfDeath = dd
-            DeathMode = dm
+            Id = id
+            HospitalNumber = hosptitalNumber
+            LastName = lastName
+            FirstName = firstName
+            BirthDate = birthDate
+            Gender = gender
+            BirthWeight = birthWeight
+            GestationalAge = gestationAge
+            PatientState = vitalStatus
+            DateOfDeath = dateOfDeath
+            DeathMode = deathMode
+            DeathLocation = locationOfDeath
             HospitalAdmissions = []
         }
 
-    let createHospitalAdmission hn adt ddt =
+    let createHospitalAdmission id hn adt trh trt dest ddt =
         {
+            Id = id
             HospitalNumber = hn
             AdmissionDate = adt
+            TransportHospital = trh
+            TransportTeam = trt
             DischargeDate = ddt
+            DischargeDestination = dest
             PICUAdmissions = []
         }
 
@@ -41,15 +65,15 @@ module Patient =
         =
         let recovMapping =
             match recovery, bypass, cardiac with
-            | false, false, true  
+            | false, false, true
             | false, false, false -> PIM.NoRecovery
             | false, true,  false // asume that post cardiac bypass is always recovery
             | false, true,  true  // asume that post cardiac bypass is always recovery
             | true,  true,  true  // asume that post cardiac bypass has precedence above cardiac
             | true,  true,  false -> PIM.PostCardiacByPass
-            | true,  false, true  -> PIM.PostCariacNonByPass
+            | true,  false, true  -> PIM.PostCardiacNonByPass
             | true,  false, false -> PIM.PostNonCardiacProcedure
-                   
+
         {
             Urgency = urgency
             Recovery = recovMapping
@@ -60,8 +84,10 @@ module Patient =
             FiO2 = fiO2
             BaseExcess = be
             SystolicBloodPressure = sbp
+            PIM2Scores = []
             PIM2Score = None
             PIM2Mortality = None
+            PIM3Scores = []
             PIM3Score = None
             PIM3Mortality = None
         }
@@ -120,16 +146,21 @@ module Patient =
             CPR24HourBefore = cpr
             Cancer = cancer
             LowRiskPrimary = lowRisk
+            PRISM3ScoreList = []
             PRISM3Score = None
             PRISM3Neuro = None
+            PRISM4ScoreList = []
             PRISM4Mortality = None
         }
         |> Some
 
 
     let createPICUAdmission
-        hospitalNumber
+        id
+        hospitalAdmissionId
         clickId
+        hospitalNumber
+        readmission
         admissionDate
         dischargeDate
         dischargeReason
@@ -141,14 +172,19 @@ module Patient =
         admissionWeight
         admissionLength
         contReanimation
+        sepsis
+        canule
         pim
         prism24
         prism12
         prism4
         =
         {
+            Id = id
+            HospitalAdmissionId = hospitalAdmissionId
             ClickId = clickId
             HospitalNumber = hospitalNumber
+            Readmission = readmission
             AdmissionDate = admissionDate
             DischargeDate = dischargeDate
             DischargeReason = dischargeReason
@@ -161,6 +197,8 @@ module Patient =
             AdmissionWeight = admissionWeight
             AdmissionLength = admissionLength
             ContinuousReanimation = contReanimation
+            Sepsis = sepsis
+            Canule = canule
             PIM = pim
             PRISM24 = prism24
             PRISM12 = prism12
@@ -170,8 +208,8 @@ module Patient =
     let picuAdmissionToString (a : PICUAdmission) =
         sprintf "%A %s %s"
             (a.AdmissionDate)
-            (a.ReferingSpecialism)
-            (a.AdmissionIndication)
+            (a.ReferingSpecialism |> Utils.DataOption.optToString )
+            (a.AdmissionIndication |> Utils.DataOption.optToString)
 
 
     let hospitalAdmissionToString (a : HospitalAdmission) =
@@ -194,3 +232,48 @@ module Patient =
                 |> hospitalAdmissionToString
                 |> List.map (sprintf "%s %s" s))
 
+
+    let patientDeath (pat : Patient) =
+        let picuDeath =
+            pat.HospitalAdmissions
+            |> List.exists (fun ha ->
+                ha.PICUAdmissions
+                |> List.exists(fun pa ->
+                    pa.DischargeReason |> DataOption.EqsIdOpt "100"
+                )
+            )
+
+        let hospitalDeath =
+            pat.HospitalAdmissions
+            |> List.exists (fun ha ->
+                ha.DischargeDestination |> DataOption.EqsIdOpt "128"
+            )
+
+        let doa =
+            pat.HospitalAdmissions
+            |> List.exists (fun ha ->
+                ha.PICUAdmissions
+                |> List.exists (fun pa ->
+                    pa.AdmissionType = DOA
+                )
+            )
+
+        let allTime =
+            pat.PatientState = Dead ||
+            pat.DateOfDeath |> Option.isSome ||
+            pat.DeathMode.IsSome || doa || hospitalDeath || picuDeath
+
+        (doa, picuDeath, hospitalDeath, allTime)
+
+
+    let patientDOA =
+        patientDeath >> (fun (b, _, _, _) -> b)
+
+    let patientPICUDeath =
+        patientDeath >> (fun (_, b, _, _) -> b)
+
+    let patientHospitalDeath =
+        patientDeath >> (fun (_, _, b, _) -> b)
+
+    let patientAllTimeDeath =
+        patientDeath >> (fun (_, _, _, b) -> b)

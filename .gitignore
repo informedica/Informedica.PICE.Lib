@@ -70,6 +70,10 @@
 # Add fsharp source files
 !*.fs
 
+# Add libs dependencies
+!/libs/
+!/libs/*.dll
+
 # Add MRDM folder
 !/mrdm/
 !/mrdm/Export_PICE.csv
@@ -83,17 +87,4 @@
 # Add test files
 !/tests/
 !/tests/Informedica.PICE.Tests/
-
-# Add documentation tools 
-!/docsTool/
-!/docsTool/templates/
-
-# Add documentation source files
-!/docsSrc/
-!/docsSrc/**
-
-# Add documentation
-!/docs/
-!/docs/**
-
 

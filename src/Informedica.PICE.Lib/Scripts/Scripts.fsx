@@ -1,62 +1,34 @@
 
-#r "System.Data.Linq"
-#load "../../../.paket/load/net472/main.group.fsx"
-
-#load "../StartUp.fs"
-#load "../NullCheck.fs"
-#load "../String.fs"
-#load "../StringBuilder.fs"
-#load "../File.fs"
-#load "../Cache.fs"
-#load "../Markdown.fs"
-#load "../Result.fs"
-#load "../Utils.fs"
-#load "../Types.fs"
-#load "../Click.fs"
-#load "../MRDM.fs"
-#load "../PIM.fs"
-#load "../PRISM.fs"
-#load "../Patient.fs"
-#load "../Validation.fs"
-#load "../Parsing.fs"
-#load "../Statistics.fs"
-#load "../Export.fs"
+#r "nuget: ExcelProvider"
 
 
-#time
+module MRDM =
+
+    open System
+    open FSharp.Interop.Excel
 
 
-open System
-open Informedica.PICE.Lib
+#if INTERACTIVE
+    [<Literal>]
+    let path = __SOURCE_DIRECTORY__ + "./../../../mrdm/Export_PICE.xlsx"
+#else
+    [<Literal>]
+    let path = @"./../mrdm/Export_PICE.xlsx"
+#endif
+    type MRDMPatient = ExcelFile<path, SheetName = "patient", HasHeaders = true, ForceString = true>
+    type MRDMHospital = ExcelFile<path, SheetName = "ziekenhuis-episode", HasHeaders = true, ForceString = true>
+    type MRDMPicu = ExcelFile<path, SheetName = "picu-episode", HasHeaders = true, ForceString = true>
+    type MRDMDiagnose = ExcelFile<path, SheetName = "bijkomendediagnoses", HasHeaders = true, ForceString = true>
 
+    let mrdmPatient = MRDMPatient path
+    let mrdmHospital = MRDMHospital path
+    let mrdmPicu = MRDMPicu path
+    let mrdmDiagnose = MRDMDiagnose path
 
-Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
+open MRDM
+open System.IO
 
-fsi.AddPrinter<DateTime>(sprintf "%A")
+File.Exists(path)
 
-
-let pats = Parsing.parseMRDM ()
-
-
-pats
-|> Result.valueOrDefault (fun _ -> [||])
-|> Array.toList
-|> List.collect (fun p ->
-    p.HospitalAdmissions
-    |> List.collect (fun ha ->
-        ha.PICUAdmissions
-        |> List.map (fun pa -> p, pa)
-    )
-)
-|> List.filter (fun (_, pa) ->
-    pa.PIM.RiskDiagnosis
-    |> List.exists (fun d -> d = Types.PIM.CardiacArrestInHospital || d = Types.PIM.CardiacArrestPreHospital)
-)
-|> List.iter (fun (p, pa) ->
-    let cpr =
-        pa.PIM.RiskDiagnosis
-        |> List.filter (fun d -> d = Types.PIM.CardiacArrestInHospital || d = Types.PIM.CardiacArrestPreHospital)
-        |> List.map (sprintf "%A")
-        |> String.concat " "
-    printfn "%s, %s, %s, %s" ((pa.AdmissionDate |> Option.get).ToString("yyyy/MM/dd")) p.HospitalNumber cpr pa.DischargeReason
-)
+mrdmDiagnose.Data
+|> Seq.toList

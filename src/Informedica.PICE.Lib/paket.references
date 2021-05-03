@@ -1,11 +1,5 @@
 FSharp.Core
-Microsoft.SourceLink.GitHub
-Microsoft.NETFramework.ReferenceAssemblies
-FSharp.Data
-FSharp.Data.TypeProviders
-FSharpComposableQuery
-ExcelDataReader
-ExcelDataReader.DataSet
-ExcelProvider
+Microsoft.Data.SqlClient
 Newtonsoft.Json
 Markdig
+ExcelProvider

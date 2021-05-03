@@ -5,4 +5,8 @@ open Expecto
 
 [<Tests>]
 let tests =
-    testList "samples" [ ]
+    testList "samples" [
+        test "passing test" {
+            Expect.isTrue true "is true"
+        }
+     ]
