@@ -1,34 +1,38 @@
 
+#r "../../../libs/Informedica.PimPrism.Lib.dll"
 #r "nuget: ExcelProvider"
+#r "nuget: Newtonsoft.Json"
+#r "nuget: Markdig"
+#r "nuget: Microsoft.Data.SqlClient"
+
+#load "../StartUp.fs"
+#load "../NullCheck.fs"
+#load "../String.fs"
+#load "../StringBuilder.fs"
+#load "../File.fs"
+#load "../Cache.fs"
+#load "../Markdown.fs"
+#load "../Result.fs"
+#load "../Types.fs"
+#load "../Utils.fs"
+#load "../Database.fs"
+#load "../MRDM.fs"
+#load "../Options.fs"
+#load "../Patient.fs"
+#load "../Validation.fs"
+#load "../Parsing.fs"
+
+open Informedica.PICE.Lib
+
+let pats, msgs =
+    Parsing.parseMRDM ()
+    |> function
+    | Ok pats ->
+        pats
+
+    | Error errs ->
+        errs
+        |> String.concat "\n"
+        |> failwith
 
 
-module MRDM =
-
-    open System
-    open FSharp.Interop.Excel
-
-
-#if INTERACTIVE
-    [<Literal>]
-    let path = __SOURCE_DIRECTORY__ + "./../../../mrdm/Export_PICE.xlsx"
-#else
-    [<Literal>]
-    let path = @"./../mrdm/Export_PICE.xlsx"
-#endif
-    type MRDMPatient = ExcelFile<path, SheetName = "patient", HasHeaders = true, ForceString = true>
-    type MRDMHospital = ExcelFile<path, SheetName = "ziekenhuis-episode", HasHeaders = true, ForceString = true>
-    type MRDMPicu = ExcelFile<path, SheetName = "picu-episode", HasHeaders = true, ForceString = true>
-    type MRDMDiagnose = ExcelFile<path, SheetName = "bijkomendediagnoses", HasHeaders = true, ForceString = true>
-
-    let mrdmPatient = MRDMPatient path
-    let mrdmHospital = MRDMHospital path
-    let mrdmPicu = MRDMPicu path
-    let mrdmDiagnose = MRDMDiagnose path
-
-open MRDM
-open System.IO
-
-File.Exists(path)
-
-mrdmDiagnose.Data
-|> Seq.toList

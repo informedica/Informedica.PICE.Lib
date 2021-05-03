@@ -617,7 +617,7 @@ module Parsing =
         |> Result.foldOk
 
     [<Literal>]
-    let cachePath = "./../mrdm/data.cache"
+    let cachePath = __SOURCE_DIRECTORY__ +  "/../../mrdm/data.cache"
 
     let parseMRDMwithCache cachePath : Result<(Types.Patient [] * string []), string []> =
         match cachePath |> Cache.getCache<Result<(Types.Patient [] * string []), string []>> with
