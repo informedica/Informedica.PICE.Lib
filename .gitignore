@@ -76,12 +76,13 @@
 
 # Add MRDM folder
 !/mrdm/
-!/mrdm/Export_PICE.csv
+
 
 # Add source files
 !/scripts/
 !/src/
 !/src/Informedica.PICE.Lib/
+!/src/Informedica.PICE.Lib/pice.xlsx
 !/src/Informedica.PICE.Lib/Scripts/
 
 # Add test files

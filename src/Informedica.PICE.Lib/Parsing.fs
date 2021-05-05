@@ -319,162 +319,6 @@ module Parsing =
         Result.either fOk fErr
 
 
-    // let validateWithClickData (clickData : Click.PIMPRISMHist.Row []) (patResult: Result<Patient * string[], _>) =
-    //     let cmpValue n oc1 oc2 pv =
-    //         match pv with
-    //         | PRISM.OneValue p1 ->
-    //             match oc1 with
-    //             | Some c1 when c1 <> 0. ->
-    //                 if c1 = p1 then "", pv
-    //                 else
-    //                     sprintf "%s click value: %A <> MRDM value: %A" n oc1 p1, pv
-    //             | _ -> "", pv
-    //         | PRISM.TwoValues (p1, p2) ->
-    //             match oc1, oc2 with
-    //             | Some c1, Some c2 when c1 <> 0. && c2 <> 0. ->
-    //                 if c1 = p1 && c2 = p2 then "", pv
-    //                 else
-    //                     sprintf "%s click values: %A, %A <> MRDM value: %A" n oc1 oc2 pv, pv
-    //             | _, _ -> "", pv
-    //         | _ ->
-    //             match oc1, oc2 with
-    //             | Some c1, None  ->
-    //                 let pv = PRISM.OneValue c1
-    //                 sprintf "", pv
-    //             | Some c1, Some c2 ->
-    //                 let pv = PRISM.TwoValues (c1, c2)
-    //                 sprintf "", pv
-    //             | _ -> "", pv
-
-    //     let cmpPRISM (prism: PRISM option) (d : Click.PIMPRISMHist.Row) =
-    //         match prism with
-    //         | Some prism -> prism
-    //         | None       -> PRISM.prism
-    //         |> fun prism ->
-    //             let input = prism |> PRISM.mapPRISMtoInput
-    //             [
-    //                 let oc1 =
-    //                     d.sbp_min
-    //                     |> Parsers.parseFloat
-    //                     |> Option.map ((*) 7.5)
-    //                 input.SystolicBloodPressure |> cmpValue "bloodpressure" oc1 None
-
-    //                 let oc1 = d.T_min |> Parsers.parseFloat
-    //                 let oc2 = d.T_max |> Parsers.parseFloat
-    //                 input.Temperature |> cmpValue "temperature" oc1 oc2
-
-    //                 let oc1 = d.emv |> Parsers.parseFloat
-    //                 input.MentalStatus |> cmpValue "emv score" oc1 None
-
-    //                 let oc1 = d.hr_max |> Parsers.parseFloat
-    //                 input.HeartRate |> cmpValue "heart rate" oc1 None
-
-    //                 let oc1 = d.pupreaction3 |> Parsers.parseFloat
-    //                 input.PupilsFixed |> cmpValue "number of pupils" oc1 None
-
-    //                 let oc1 = d.pH_min |> Parsers.parseFloat
-    //                 let oc2 = d.pH_max|> Parsers.parseFloat
-    //                 input.PH |> cmpValue "ph" oc1 oc2
-
-    //                 let oc1 = d.bicarbonate_min |> Parsers.parseFloat
-    //                 let oc2 = d.bicarbonate_max |> Parsers.parseFloat
-    //                 input.TotalCO2 |> cmpValue "bicarbonate" oc1 oc2
-
-    //                 let oc1 = d.paco2_max |> Parsers.parseFloat
-    //                 input.PCO2 |> cmpValue "pCO2" oc1 None
-
-    //                 let oc1 = d.pao2_min |> Parsers.parseFloat
-    //                 input.PaO2 |> cmpValue "paO2" oc1 None
-
-    //                 let oc1 = d.glucose_max |> Parsers.parseFloat
-    //                 input.Glucose |> cmpValue "glucose" oc1 None
-
-    //                 let oc1 = d.kalium_max |> Parsers.parseFloat
-    //                 input.Potassium |> cmpValue "potassium" oc1 None
-
-    //                 let oc1 = d.creatinine_max |> Parsers.parseFloat
-    //                 input.Creatinine |> cmpValue "creatinine" oc1 None
-
-    //                 let oc1 = d.ureum_max |> Parsers.parseFloat
-    //                 input.Urea |> cmpValue "urea" oc1 None
-
-    //                 let oc1 = d.leuco_min |> Parsers.parseFloat
-    //                 input.WhiteBloodCount |> cmpValue "white blood cells" oc1 None
-
-    //                 let oc1 = d.PTT_max |> Parsers.parseFloat
-    //                 input.PT |> cmpValue "PT" oc1 None
-
-    //                 let oc1 = d.PTT_max |> Parsers.parseFloat
-    //                 input.PTT |> cmpValue "aPTT" oc1 None
-
-    //                 let oc1 = d.thrombo_min |> Parsers.parseFloat
-    //                 input.Platelets |> cmpValue "platelets" oc1 None
-    //             ]
-    //             |> List.fold (fun (i, (input : PRISM.Input), msgs) (msg, v) ->
-    //                 match i with
-    //                 | _ when i = 0  -> i + 1, {  input with SystolicBloodPressure = v }, (msg::msgs)
-    //                 | _ when i = 1  -> i + 1, {  input with Temperature = v }, (msg::msgs)
-    //                 | _ when i = 2  -> i + 1, {  input with MentalStatus = v }, (msg::msgs)
-    //                 | _ when i = 3  -> i + 1, {  input with HeartRate = v }, (msg::msgs)
-    //                 | _ when i = 4  -> i + 1, {  input with PupilsFixed = v }, (msg::msgs)
-    //                 | _ when i = 5  -> i + 1, {  input with PH = v }, (msg::msgs)
-    //                 | _ when i = 6  -> i + 1, {  input with TotalCO2 = v }, (msg::msgs)
-    //                 | _ when i = 7  -> i + 1, {  input with PCO2 = v }, (msg::msgs)
-    //                 | _ when i = 8  -> i + 1, {  input with PaO2 = v }, (msg::msgs)
-    //                 | _ when i = 9  -> i + 1, {  input with Glucose = v }, (msg::msgs)
-    //                 | _ when i = 10 -> i + 1, {  input with Potassium = v }, (msg::msgs)
-    //                 | _ when i = 11 -> i + 1, {  input with Creatinine = v }, (msg::msgs)
-    //                 | _ when i = 12 -> i + 1, {  input with Urea = v }, (msg::msgs)
-    //                 | _ when i = 13 -> i + 1, {  input with WhiteBloodCount = v }, (msg::msgs)
-    //                 | _ when i = 14 -> i + 1, {  input with PT = v }, (msg::msgs)
-    //                 | _ when i = 15 -> i + 1, {  input with PTT = v }, (msg::msgs)
-    //                 | _ when i = 16 -> i + 1, {  input with Platelets = v }, (msg::msgs)
-    //                 | _ -> i, input, msgs
-    //             ) (0, input, [])
-    //             |> fun (_, input, msgs) ->
-    //                 input |> PRISM.mapInputToPRISM prism |> Some ,
-    //                 msgs
-
-    //     patResult
-    //     |> function
-    //     | Result.Error _        -> patResult
-    //     | Result.Ok (pat, msgs) ->
-    //         let vmsgs, adms =
-    //             pat.HospitalAdmissions
-    //             |> List.collect (fun ha -> ha.PICUAdmissions)
-    //             |> List.fold (fun (msgs, adms) adm ->
-    //                 match clickData |> Array.tryFind (fun d -> d.adm_ic_id = adm.ClickId) with
-    //                 | None   ->  msgs, adms
-    //                 | Some d ->
-    //                     d
-    //                     |> cmpPRISM adm.PRISM24
-    //                     |> fun (prism, vmsgs) ->
-    //                         vmsgs
-    //                         |> List.filter (isNullOrWhiteSpace >> not)
-    //                         |> List.map (sprintf "%s: %s" pat.HospitalNumber)
-    //                         |> List.append msgs, { adm with PRISM24 = prism }::adms
-    //             ) ([], [])
-
-    //         let pat =
-    //             {
-    //                 pat with
-    //                     HospitalAdmissions =
-    //                         pat.HospitalAdmissions
-    //                         |> List.map (fun ha ->
-    //                             { ha with
-    //                                 PICUAdmissions =
-    //                                     ha.PICUAdmissions
-    //                                     |> List.map (fun pa ->
-    //                                         match adms |> List.tryFind (fun x -> x.ClickId = pa.ClickId) with
-    //                                         | Some a -> a
-    //                                         | None   -> pa
-    //                                     )
-    //                             }
-    //                         )
-    //             }
-
-    //         Result.okMsg pat (vmsgs |> List.toArray |> Array.append msgs)
-
     let filterDuplicateOrMore (results : Result<Patient * string[], string[]> array) =
         results
         |> Result.foldOk
@@ -616,10 +460,8 @@ module Parsing =
         )
         |> Result.foldOk
 
-    [<Literal>]
-    let cachePath = __SOURCE_DIRECTORY__ +  "/../../mrdm/data.cache"
 
-    let parseMRDMwithCache cachePath : Result<(Types.Patient [] * string []), string []> =
+    let parseMRDM exportPath cachePath : Result<(Types.Patient [] * string []), string []> =
         match cachePath |> Cache.getCache<Result<(Types.Patient [] * string []), string []>> with
         | Some pats -> pats
         | None ->
@@ -628,15 +470,15 @@ module Parsing =
                 let timer = new Stopwatch ()
                 timer.Start ()
 
-                let hospData = mrdmHospital.Data |> Seq.toArray
-                let picuData = mrdmPicu.Data |> Seq.toArray
+                let hospData = (getMrdmHospital exportPath).Data |> Seq.toArray
+                let picuData = (getMrdmPicu exportPath).Data |> Seq.toArray
                 let picuAdms =
                     printfn "parsing picu admissions"
                     parsePICUAdmissions picuData
 //                let clickData = Click.pimprismHist.Data |> Seq.toArray
 
                 let diagnoses =
-                    mrdmDiagnose.Data
+                    (getMrdmDiagnose exportPath).Data
                     |> Seq.toArray
                     |> Array.map (fun r ->
                         {|
@@ -673,7 +515,7 @@ module Parsing =
                     |> printfn "%i: finished filtering duplicates"
                     xs
 
-                mrdmPatient.Data
+                (getMrdmPatient exportPath).Data
                 |> Seq.toArray
                 |> Array.mapi parsePat
                 |> Array.mapi parseHosp
@@ -686,6 +528,5 @@ module Parsing =
 
 
 
-    let parseMRDM () : Result<(Types.Patient [] * string []), string []> = parseMRDMwithCache cachePath
 
 

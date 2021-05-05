@@ -1,13 +1,13 @@
 <Project>
     <PropertyGroup>
         <!-- summary is not migrated from project.json, but you can use the <Description> property for that if needed. -->
-        <PackageTags>f#, fsharp</PackageTags>
-        <PackageProjectUrl>https://github.com/halcwb/GenUtils</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/halcwb/GenUtils/blob/master/LICENSE.md</PackageLicenseUrl>
+        <PackageTags>medical, dutch-mortality-registry</PackageTags>
+        <PackageProjectUrl>https://github.com/informedica/Informedica.PICE.Lib</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/informedica/Informedica.PICE.Lib/blob/master/LICENSE.md</PackageLicenseUrl>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <RepositoryType>git</RepositoryType>
-        <Authors>halcwb</Authors>
-        <RepositoryUrl>https://github.com/halcwb/GenUtils</RepositoryUrl>
+        <Authors>informedica</Authors>
+        <RepositoryUrl>https://github.com/informedica/Informedica.PICE.Lib</RepositoryUrl>
         <!-- owners is not supported in MSBuild -->
     </PropertyGroup>
 </Project>

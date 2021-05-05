@@ -5,16 +5,21 @@ module MRDM =
     open System
     open FSharp.Interop.Excel
 
+#if INTERACTIVE
     [<Literal>]
-    let path = __SOURCE_DIRECTORY__ +  "/../../mrdm/Export_PICE.xlsx"
+    let compileTimePath = __SOURCE_DIRECTORY__ +  "./pice.xlsx"
+#else
+    [<Literal>]
+    let compileTimePath = "./pice.xlsx"
+#endif
 
-    type MRDMPatient = ExcelFile<path, SheetName = "patient", HasHeaders = true, ForceString = true>
-    type MRDMHospital = ExcelFile<path, SheetName = "ziekenhuis-episode", HasHeaders = true, ForceString = true>
-    type MRDMPicu = ExcelFile<path, SheetName = "picu-episode", HasHeaders = true, ForceString = true>
-    type MRDMDiagnose = ExcelFile<path, SheetName = "bijkomendediagnoses", HasHeaders = true, ForceString = true>
+    type MRDMPatient = ExcelFile<compileTimePath, SheetName = "patient", HasHeaders = true, ForceString = true>
+    type MRDMHospital = ExcelFile<compileTimePath, SheetName = "ziekenhuis-episode", HasHeaders = true, ForceString = true>
+    type MRDMPicu = ExcelFile<compileTimePath, SheetName = "picu-episode", HasHeaders = true, ForceString = true>
+    type MRDMDiagnose = ExcelFile<compileTimePath, SheetName = "bijkomendediagnoses", HasHeaders = true, ForceString = true>
 
-    let mrdmPatient = MRDMPatient path
-    let mrdmHospital = MRDMHospital path
-    let mrdmPicu = MRDMPicu path
-    let mrdmDiagnose = MRDMDiagnose path
+    let getMrdmPatient path = MRDMPatient path
+    let getMrdmHospital path = MRDMHospital path
+    let getMrdmPicu path = MRDMPicu path
+    let getMrdmDiagnose path = MRDMDiagnose path
 
