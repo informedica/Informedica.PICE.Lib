@@ -389,7 +389,7 @@ module Parsing =
             <*> mapLowRiskPRISM d.``risicodiag-hoofd``
 
         let pim (d : MRDM.MRDMPicu.Row) =
-            let cardiac g =
+            let cardiacSurg g =
                 let d1 =
                     d.diagnose1
                     |> Parsers.parseDiagnose "diagnose1"
@@ -404,7 +404,7 @@ module Parsing =
             <!> mapUrgency d.``adm-typeid-urgentie``
             <*> parseBool d.recovery
             <*> parseBool d.bypass
-            <*> Result.ok (cardiac "cardiovasculair")
+            <*> Result.ok (cardiacSurg "hartchirurgie")
             <*> (mapRisk d.``risicodiag-hoofd``
                          d.``cprprehosp-riskpim``
                          d.``cprprepicu-riskpim``

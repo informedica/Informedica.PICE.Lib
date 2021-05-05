@@ -54,7 +54,7 @@ module Patient =
         urgency
         recovery
         bypass
-        cardiac
+        cardiacSurg
         riskDiagnosis
         ventilated
         pupils
@@ -64,7 +64,7 @@ module Patient =
         sbp
         =
         let recovMapping =
-            match recovery, bypass, cardiac with
+            match recovery, bypass, cardiacSurg with
             | false, false, true
             | false, false, false -> PIM.NoRecovery
             | false, true,  false // asume that post cardiac bypass is always recovery
