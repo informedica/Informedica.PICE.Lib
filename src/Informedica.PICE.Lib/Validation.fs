@@ -36,9 +36,17 @@ module Validation =
                     ha.PICUAdmissions
                     |> List.exists (fun pa -> fromLaterThanUntil pa.AdmissionDate pa.DischargeDate)
                 )
-
             if xs |> List.length > 0 then
                 NotValid(p, "PICU Opname datum na ontslag datum")
+
+            let xs =
+                p.HospitalAdmissions
+                |> List.filter (fun ha ->
+                    ha.PICUAdmissions
+                    |> List.exists (fun pa -> pa.AdmissionDate.IsNone)
+                )
+            if xs |> List.length > 0 then
+                NotValid(p, "PICU Opname zonder opname datum")
 
             if String.IsNullOrWhiteSpace(p.HospitalNumber) then
                 NotValid(p, "Geen ziekenhuis nummer")
